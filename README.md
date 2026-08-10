@@ -1,5 +1,7 @@
 # AETHERIA 2099 // NEXUS TERMINAL
 
+▶ **플레이: https://aetheria-2099.vercel.app** (키 없이 오프라인 데모 플레이 가능 · 무료 Gemini 키 입력 시 AI 자유 대화)
+
 AI 기반 인터랙티브 픽션. **운영비 0원** — 플레이어가 자신의 Google AI Studio
 Gemini 무료 API Key를 입력하는 **BYOK(Bring Your Own Key)** 방식으로 구동됩니다.
 
