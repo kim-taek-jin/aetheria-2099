@@ -59,7 +59,7 @@ const RESPONSE_SCHEMA = {
   ],
 }
 
-function systemInstruction() {
+export function systemInstruction() {
   return `You are the narrative ENGINE of the cyberpunk interactive-fiction game
 "Aetheria 2099". You are a DATA GENERATOR, not a chat assistant.
 
@@ -171,7 +171,7 @@ ${WORLD_LORE}`
 }
 
 // ---- 3-tier context payload (static lore is in systemInstruction only) ----
-function buildContents(save, playerInput) {
+export function buildContents(save, playerInput) {
   const g = gateFlags(save)
   const stateBlock = {
     active_npc: save.activeNpc,

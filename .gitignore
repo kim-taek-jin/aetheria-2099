@@ -4,3 +4,9 @@ dist-electron
 .DS_Store
 *.local
 .env
+
+# ML 산출물 (크고 재생성 가능)
+ml/dataset.jsonl
+ml/*.gguf
+ml/outputs/
+ml/aetheria-*/
