@@ -12,11 +12,20 @@ import { sceneAnchor, SCENES, eligibleEndings } from '../game/scenes.js'
 // alias for the current free Flash model — it works across differing keys /
 // regions where a pinned id (e.g. gemini-2.5-flash) may 404 for generateContent.
 export const MODEL_ID = 'gemini-flash-latest'
+
+// Compact system prompt for the DISTILLED local model. Training and inference
+// must use the SAME system string, so it lives here and is imported by both
+// the dataset generator and the Ollama provider. (Gemini itself uses the full
+// systemInstruction() below; the small model learns the rules into its weights.)
+export const SHORT_SYSTEM =
+  'You are the narrative ENGINE of the Korean cyberpunk interactive-fiction game "Aetheria 2099". ' +
+  'Given the SCENE_ANCHOR, GAME_STATE, and PLAYER_ACTION, output exactly ONE JSON object (no markdown) ' +
+  'that advances the story by one beat. All player-facing text must be pure Korean Hangul.'
 const ENDPOINT = (model, key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
 
 // ---- JSON Schema forced on the model (1st line of defense) ----
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
     narration: { type: 'string' }, // 3rd-person situational description (no speaker)
@@ -283,7 +292,7 @@ async function fetchWithRetry(url, body, signal, attempts = 3) {
 }
 
 // ---- 3-stage JSON fallback (schema should make this rare) ----
-function safeParse(text) {
+export function safeParse(text) {
   if (!text) return null
   try {
     return JSON.parse(text)
@@ -316,7 +325,7 @@ function stripHanja(s) {
 }
 
 // Coerce/clamp anything the schema somehow let through (2nd defense line).
-function normalize(p, save) {
+export function normalize(p, save) {
   const okEnum = (v, arr, fb) => (arr.includes(v) ? v : fb)
   const clampInt = (n) => Math.max(-10, Math.min(10, Math.round(Number(n) || 0)))
   let choices = Array.isArray(p.generated_choices) ? p.generated_choices.slice(0, 3) : []

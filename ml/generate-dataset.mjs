@@ -17,18 +17,13 @@
 // ============================================================
 
 import fs from 'fs'
-import { buildContents, generateBeat } from '../src/services/geminiService.js'
+import { buildContents, generateBeat, SHORT_SYSTEM } from '../src/services/geminiService.js'
 import { SCENES, isEnding } from '../src/game/scenes.js'
 import { createNewGame } from '../src/game/state.js'
 import { NPCS, TONES, DIALOGUE_TONES, ACTION_TONES } from '../src/game/lore.js'
 
-// 학습용 짧은 시스템 프롬프트. 상세 규칙은 assistant 예제로 가중치에 학습된다.
-// (Gemini 호출은 여전히 전체 systemInstruction을 쓰므로 출력 품질은 유지)
-const SHORT_SYSTEM =
-  'You are the narrative ENGINE of the Korean cyberpunk interactive-fiction game "Aetheria 2099". ' +
-  'Given the SCENE_ANCHOR, GAME_STATE, and PLAYER_ACTION, output exactly ONE JSON object (no markdown) ' +
-  'that advances the story by one beat. All player-facing text must be pure Korean Hangul.'
-
+// SHORT_SYSTEM은 geminiService에서 import — 학습(여기)과 추론(ollamaProvider)이
+// 동일한 시스템 문자열을 쓰도록 단일 출처로 관리한다.
 const KEY = process.env.GEMINI_API_KEY
 const TARGET = Number(process.env.TARGET || 300)
 const DELAY_MS = Number(process.env.DELAY_MS || 4500)
