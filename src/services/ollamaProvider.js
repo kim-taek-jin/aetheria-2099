@@ -27,7 +27,8 @@ export async function generateBeat({ save, playerInput, signal, url = OLLAMA_URL
     stream: false,
     // Ollama 구조화 출력: 스키마로 디코딩을 제약해 유효 JSON을 강제(소형 모델 방어).
     format: RESPONSE_SCHEMA,
-    options: { temperature: 0.9, num_predict: 1024 },
+    // 소형 3B는 온도가 높으면 문장이 늘어지고 흐트러진다 → 0.65로 낮춰 간결·일관성↑.
+    options: { temperature: 0.65, top_p: 0.9, num_predict: 900 },
   }
 
   let resp
