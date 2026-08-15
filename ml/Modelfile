@@ -1,0 +1,26 @@
+# ============================================================
+#  Aetheria 2099 — Ollama Modelfile (파인튜닝된 Qwen2.5, 하이브리드 오프라인 티어)
+#
+#  Colab에서 내려받은 GGUF를 로컬 Ollama 모델로 등록한다.
+#  이 Modelfile 과 .gguf 를 같은 폴더에 두고:
+#
+#    ollama create aetheria -f Modelfile
+#    ollama run aetheria   # 확인용
+#
+#  등록 후 평가:
+#    OLLAMA_MODEL=aetheria node ml/eval.mjs
+#
+#  ※ FROM 경로는 실제 내려받은 파일명으로 맞춘다(아래는 q4_k_m 기본값).
+# ============================================================
+
+# 7B 상향본. 다운로드한 실제 gguf 파일명에 맞춰 이 줄만 바꾸면 된다.
+FROM ./Qwen2.5-7B-Instruct.Q4_K_M.gguf
+
+# 학습과 동일한 짧은 시스템(규칙은 가중치로 학습됨) — geminiService의 SHORT_SYSTEM과 일치.
+SYSTEM """You are the narrative ENGINE of the Korean cyberpunk interactive-fiction game "Aetheria 2099". Given the SCENE_ANCHOR, GAME_STATE, and PLAYER_ACTION, output exactly ONE JSON object (no markdown) that advances the story by one beat. All player-facing text must be pure Korean Hangul."""
+
+# 추론 파라미터 — 소형 3B는 낮은 온도가 간결·일관적(게임 ollamaProvider와 동일).
+PARAMETER temperature 0.65
+PARAMETER top_p 0.9
+PARAMETER num_ctx 4096
+PARAMETER num_predict 900

@@ -13,10 +13,12 @@
 # !pip install -q --no-deps trl peft accelerate bitsandbytes
 
 # %% [셀 2] 데이터셋 업로드
-# 로컬에서 만든 ml/dataset.jsonl 을 Colab에 업로드한다.
+# 로컬에서 만든 ml/train.jsonl(학습 285개)을 업로드한다.
+# ※ 평가용 ml/eval.jsonl(홀드아웃 40개)은 학습에 넣지 않는다 — 학습 후
+#    로컬 Ollama에서 eval.mjs로 그 40개를 돌려 정직한 baseline을 잰다.
 from google.colab import files
-up = files.upload()  # dataset.jsonl 선택
-DATA_PATH = "dataset.jsonl"
+up = files.upload()  # train.jsonl 선택
+DATA_PATH = "train.jsonl"
 
 # %% [셀 3] 베이스 모델 로드 (Qwen2.5-3B, 4bit) — 한국어+JSON에 강한 소형 모델
 from unsloth import FastLanguageModel
@@ -24,7 +26,7 @@ import torch
 
 MAX_SEQ = 4096  # 우리 예제는 앵커 포함 ~2k토큰이라 4096이면 충분
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="unsloth/Qwen2.5-3B-Instruct-bnb-4bit",
+    model_name="unsloth/Qwen2.5-7B-Instruct-bnb-4bit",  # 3B→7B 상향(한국어·일관성↑)
     max_seq_length=MAX_SEQ,
     load_in_4bit=True,     # QLoRA: 4bit로 올려 T4(16GB)에 맞춤
     dtype=None,
@@ -63,17 +65,19 @@ print(ds[0]["text"][:600])
 from trl import SFTTrainer, SFTConfig
 from unsloth.chat_templates import train_on_responses_only
 
+# 참고: 최신 TRL은 dataset_text_field / max_seq_length 를 SFTConfig 안에 둔다.
+# (SFTTrainer(...)에 직접 넘기면 TypeError가 날 수 있어 SFTConfig로 옮김)
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
     train_dataset=ds,
-    dataset_text_field="text",
-    max_seq_length=MAX_SEQ,
     args=SFTConfig(
+        dataset_text_field="text",
+        max_seq_length=MAX_SEQ,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,   # 유효 배치 8
         warmup_steps=10,
-        num_train_epochs=2,              # 데이터 적으면 2~3
+        num_train_epochs=3,              # 데이터 285개로 적음 → 3 에폭
         learning_rate=2e-4,
         logging_steps=10,
         optim="adamw_8bit",
