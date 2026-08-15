@@ -119,6 +119,68 @@ body {
 }
 .intro-up { animation: introUp 0.6s ease both; }
 
+/* 선택의 무게 — 게이지 델타 플로팅(+3 / -2 가 떠올랐다 사라짐) */
+@keyframes deltaFloat {
+  0% { opacity: 0; transform: translateY(5px); }
+  18% { opacity: 1; transform: translateY(0); }
+  68% { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 0; transform: translateY(-11px); }
+}
+.delta-float { animation: deltaFloat 2.2s ease-out forwards; }
+
+/* 증거 HIT/MISS — 화면 전체 짧은 플래시 */
+@keyframes evidenceFlash {
+  0% { opacity: 0; transform: scale(0.9); }
+  12% { opacity: 1; transform: scale(1.02); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+.evidence-flash { animation: evidenceFlash 1.8s ease-out forwards; }
+
+/* ---- 30초 시네마틱 인트로 ---- */
+@keyframes cineIn {
+  from { opacity: 0; transform: translateY(10px) scale(1.012); }
+  to { opacity: 1; transform: none; }
+}
+.cine-in { animation: cineIn 0.9s ease both; }
+
+@keyframes rainFall {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 700px, -50px 700px; }
+}
+.rain-layer {
+  background-image:
+    repeating-linear-gradient(101deg, rgba(34, 227, 255, 0.10) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(101deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 16px);
+  animation: rainFall 0.85s linear infinite;
+}
+
+@keyframes nexusPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.92; transform: scale(1.05); }
+}
+.nexus-eye { animation: nexusPulse 3.4s ease-in-out infinite; }
+
+@keyframes sway {
+  0%, 100% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+}
+.sway { animation: sway 3.2s ease-in-out infinite; }
+
+@keyframes leakBurst {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0.9; }
+}
+.leak-burst { animation: leakBurst 1.5s ease-out both; }
+
+@keyframes figRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.fig-rise { animation: figRise 0.8s ease both; }
+
 /* thin scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }

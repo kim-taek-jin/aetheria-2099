@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RotateCcw, BookLock, Trophy, Clock, Fingerprint } from 'lucide-react'
 import { SCENES } from '../game/scenes.js'
+import { ALL_ENDINGS, ENDING_COUNT, recordEnding } from '../game/collection.js'
 
 // Per-ending visual identity: accent color, sigil, epigraph.
 const ENDING_STYLE = {
@@ -55,6 +56,9 @@ const OUTRO_LINES = ['> 세션 종료 시퀀스 개시…', '> 선택과 대가,
 export default function EndingScreen({ endingId, beat, save, onRestart, onCodex }) {
   const [stage, setStage] = useState(0)
   const [lines, setLines] = useState([])
+  // Cross-run collection: record this ending, learn if it's newly discovered.
+  const [col, setCol] = useState({ discovered: [], isNew: false })
+  useEffect(() => setCol(recordEnding(endingId)), [endingId])
   const scene = SCENES[endingId]
   const style = ENDING_STYLE[endingId] || ENDING_STYLE.ENDING_KAEL_SILENCE
   const hidden = endingId === 'ENDING_NEXUS_TRUST' || endingId === 'ENDING_JAYNE_ORIGIN'
@@ -123,6 +127,31 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
             />
             <Stat icon={<Trophy size={13} />} label="주요 세력" value={topNpc} />
           </div>
+
+          {/* Ending collection — the cross-run completion loop (replay hook). */}
+          <div className="mt-4 border-t border-cyan-500/10 pt-3">
+            <div className="mb-2 text-[10px] tracking-[0.3em] text-cyan-300/45">
+              결말 수집 {col.discovered.length}/{ENDING_COUNT}
+              {col.isNew && <span className="ml-2 font-bold text-neon-green">◆ NEW</span>}
+            </div>
+            <div className="flex justify-center gap-2">
+              {ALL_ENDINGS.map((e) => {
+                const got = col.discovered.includes(e.id)
+                const isThis = e.id === endingId
+                return (
+                  <span
+                    key={e.id}
+                    title={got ? SCENES[e.id]?.title || e.id : '미발견'}
+                    className={`text-lg leading-none ${
+                      got ? (isThis ? 'text-neon-green' : 'text-cyan-200/70') : 'text-cyan-500/20'
+                    } ${isThis ? 'animate-pulse' : ''}`}
+                  >
+                    {got ? e.sigil : '◇'}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Stage 3: actions */}
@@ -150,7 +179,9 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
         </div>
 
         <p className="mt-5 text-[10px] tracking-widest text-cyan-300/30">
-          AETHERIA::2099 — 6개의 결말 중 하나. 다른 세력, 다른 진실이 남아 있다.
+          {col.discovered.length >= ENDING_COUNT
+            ? 'AETHERIA::2099 — 모든 결말을 발견했다. 도시의 모든 진실이 당신의 것이다.'
+            : `AETHERIA::2099 — ${ENDING_COUNT - col.discovered.length}개의 결말이 아직 어둠 속에 있다.`}
         </p>
       </div>
     </div>

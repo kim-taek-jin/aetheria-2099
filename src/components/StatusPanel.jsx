@@ -14,9 +14,12 @@ const TONE_LABEL = {
   Forest_Glitch: '숲 // 글리치',
 }
 
-function Gauge({ label, value, color, danger }) {
+// delta: 이번 턴 변화량(없으면 null). invert=true면 +가 나쁨(의심·추적).
+function Gauge({ label, value, color, danger, delta, dkey, invert }) {
+  const show = typeof delta === 'number' && delta !== 0
+  const good = invert ? delta < 0 : delta > 0
   return (
-    <div className="flex items-center gap-1">
+    <div className="relative flex items-center gap-1">
       <span className="w-4 shrink-0 text-cyan-300/60">{label}</span>
       <div className="relative h-2 w-full overflow-hidden rounded bg-black/60">
         <div
@@ -25,14 +28,25 @@ function Gauge({ label, value, color, danger }) {
         />
       </div>
       <span className="w-7 shrink-0 text-right text-cyan-200/70">{value}</span>
+      {show && (
+        <span
+          key={dkey}
+          className={`delta-float pointer-events-none absolute -top-3 right-0 text-[10px] font-bold ${
+            good ? 'text-neon-green' : 'text-neon-red'
+          }`}
+        >
+          {delta > 0 ? `+${delta}` : delta}
+        </span>
+      )}
     </div>
   )
 }
 
-export default function StatusPanel({ save }) {
+export default function StatusPanel({ save, delta }) {
   const npcs = ['Ren', 'Kael', 'Echo']
   const heat = save.heat || 0
   const heatHot = heat >= HEAT_WARN
+  const dk = delta?.turn // 델타 애니메이션 리트리거용 key
   return (
     <div className="panel-border rounded-lg px-3 py-2 text-[11px]">
       <div className="mb-2 flex items-center justify-between">
@@ -67,12 +81,17 @@ export default function StatusPanel({ save }) {
                   value={r.suspicion}
                   color="bg-neon-amber"
                   danger={r.suspicion >= GATES.SUSPICION_HOSTILE}
+                  delta={delta?.npc === n ? delta.dSus : null}
+                  dkey={dk}
+                  invert
                 />
                 <Gauge
                   label={<Heart size={10} />}
                   value={r.affinity}
                   color="bg-neon-green"
                   danger={false}
+                  delta={delta?.npc === n ? delta.dAff : null}
+                  dkey={dk}
                 />
               </div>
             </div>
@@ -81,7 +100,7 @@ export default function StatusPanel({ save }) {
       </div>
 
       {/* NEXUS trace — city-wide surveillance clock */}
-      <div className="mt-2 flex items-center gap-2">
+      <div className="relative mt-2 flex items-center gap-2">
         <span className={`flex shrink-0 items-center gap-1 ${heatHot ? 'text-neon-red' : 'text-cyan-300/60'}`}>
           <Satellite size={12} className={heatHot ? 'glitch-flicker' : ''} /> NEXUS 추적
         </span>
@@ -92,6 +111,16 @@ export default function StatusPanel({ save }) {
           />
         </div>
         <span className={`w-8 shrink-0 text-right ${heatHot ? 'text-neon-red' : 'text-cyan-200/70'}`}>{heat}%</span>
+        {typeof delta?.dHeat === 'number' && delta.dHeat !== 0 && (
+          <span
+            key={dk}
+            className={`delta-float pointer-events-none absolute -top-3 right-0 text-[10px] font-bold ${
+              delta.dHeat < 0 ? 'text-neon-green' : 'text-neon-red'
+            }`}
+          >
+            {delta.dHeat > 0 ? `+${delta.dHeat}` : delta.dHeat}
+          </span>
+        )}
       </div>
     </div>
   )

@@ -20,7 +20,9 @@ export const MODEL_ID = 'gemini-flash-latest'
 export const SHORT_SYSTEM =
   'You are the narrative ENGINE of the Korean cyberpunk interactive-fiction game "Aetheria 2099". ' +
   'Given the SCENE_ANCHOR, GAME_STATE, and PLAYER_ACTION, output exactly ONE JSON object (no markdown) ' +
-  'that advances the story by one beat. All player-facing text must be pure Korean Hangul.'
+  'that advances the story by one beat. All player-facing text must be pure Korean Hangul. ' +
+  'generated_choices are exactly 3 SHORT options (6-16 Korean chars each, labeled like "[조사] …") ' +
+  "that are ALL Jayne's own next line or action — never an NPC's words, never a full sentence."
 const ENDPOINT = (model, key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
 
@@ -102,15 +104,22 @@ NARRATION vs DIALOGUE (two separate fields — do NOT merge them):
 - Example — narration: "렌이 슬롯에 칩을 꽂자 단말이 붉게 깜빡인다."  /
   npc_response: "이런 물건을 어디서 주웠지?"
 
-CHOICES (exactly 3, mix dialogue and action so it is never "just talking"):
+CHOICES (exactly 3 — these are the PLAYER'S options for what to do next):
+- ALL THREE are JAYNE'S OWN next move — a line SHE says or an action SHE takes.
+  NEVER an NPC's words, NEVER narration, NEVER addressed to Jayne. Write them
+  from Jayne's side of the table, as things the player picks to do.
+- KEEP EACH ONE SHORT: a terse phrase after the label, roughly 6-16 Korean
+  characters — NOT a full sentence, NOT an explanation. Think menu option, not
+  paragraph. Good: "[조사] 배달원의 품을 뒤진다" / "[솔직하게] 이 칩이 뭐냐고 묻는다"
+  / "[도주] 드론 반대편으로 달린다". Bad (too long / not Jayne): a whole sentence,
+  a speech, or a line the NPC would say.
 - Dialogue tones (HOW Jayne speaks): ${DIALOGUE_TONES.join(', ')}.
 - Action tones (what Jayne DOES, non-verbal): ${ACTION_TONES.join(', ')}
   = 조사하기 / 해킹·기기조작 / 은신·회피 / 도주.
-- Default a beat to dialogue choices, but whenever the SETTING/DILEMMA invites
-  it (a room to search, a device to breach, danger to evade), replace one or
-  two of the three with an ACTION choice. Prefix each choice text with a bracket
-  label matching its tone, e.g. "[조사] …", "[해킹] …", "[은신] …", "[도주] …",
-  "[솔직하게] …", "[거짓말] …", "[위협/도발] …".
+- Default to dialogue choices, but whenever the SETTING/DILEMMA invites it (a
+  room to search, a device to breach, danger to evade), make one or two of the
+  three an ACTION choice. Prefix each choice with its tone label: "[조사] …",
+  "[해킹] …", "[은신] …", "[도주] …", "[솔직하게] …", "[거짓말] …", "[위협/도발] …".
 - If the anchor provides ACTION_HINTS, prefer offering those exact actions.
 - An action choice can change gauges and reveal fragments just like dialogue.
 
@@ -324,6 +333,17 @@ function stripHanja(s) {
     .trim()
 }
 
+// Keep choices menu-short: a label + terse phrase. Long, rambling options are
+// truncated at a word boundary (defense line for weaker/local models).
+const CHOICE_MAX = 40
+function capChoice(s) {
+  const t = (s || '').trim()
+  if (t.length <= CHOICE_MAX) return t
+  const cut = t.slice(0, CHOICE_MAX - 2)
+  const sp = cut.lastIndexOf(' ')
+  return (sp > 20 ? cut.slice(0, sp) : cut).trim() + '…'
+}
+
 // Coerce/clamp anything the schema somehow let through (2nd defense line).
 export function normalize(p, save) {
   const okEnum = (v, arr, fb) => (arr.includes(v) ? v : fb)
@@ -334,7 +354,7 @@ export function normalize(p, save) {
     choices.push({ text: `[${t}] …`, tone: t })
   }
   choices = choices.map((c, i) => ({
-    text: stripHanja(String(c?.text ?? '…')),
+    text: capChoice(stripHanja(String(c?.text ?? '…'))),
     tone: okEnum(c?.tone, CHOICE_TONES, DIALOGUE_TONES[i] || 'Honest'),
   }))
   return {
