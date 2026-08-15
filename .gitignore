@@ -5,8 +5,10 @@ dist-electron
 *.local
 .env
 
-# ML 산출물 (크고 재생성 가능)
-ml/dataset.jsonl
+# ML 산출물 (크고 재생성 가능): 데이터셋·모델·키
+ml/*.jsonl
 ml/*.gguf
 ml/outputs/
 ml/aetheria-*/
+ml/key.env
+*.gguf
