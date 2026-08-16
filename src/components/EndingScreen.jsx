@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { RotateCcw, BookLock, Trophy, Clock, Fingerprint } from 'lucide-react'
 import { SCENES } from '../game/scenes.js'
 import { ALL_ENDINGS, ENDING_COUNT, recordEnding } from '../game/collection.js'
+import CodeRain from './CodeRain.jsx'
 
 // Per-ending visual identity: accent color, sigil, epigraph.
 const ENDING_STYLE = {
@@ -49,8 +50,19 @@ const ENDING_STYLE = {
   },
 }
 
-// Cinematic "jack-out" outro that bookends the intro.
-const OUTRO_LINES = ['> 세션 종료 시퀀스 개시…', '> 선택과 대가, 기록 봉인…', '> 결말 데이터 저장 완료.']
+// Cinematic "jack-out" outro that bookends the intro (터미널 dossier 언어 일치).
+// 인트로: 파일 #00 복호화 → 세계가 거짓. 아웃트로: 세션 종료 → 네 선택이 남긴 세계.
+const OUTRO_LINES = ['> 잭아웃 시퀀스 개시…', '> 선택과 대가 · 기록 정리…']
+
+// 결말별 "세계의 최종 기록" 한 줄(NEXUS 아카이브 결산).
+const OUTRO_RESULT = {
+  ENDING_REN_MONOPOLY: '기억 시장 개방 · 진실은 최고가에 팔린다',
+  ENDING_KAEL_SILENCE: '하늘 재봉인 · 도시는 평온을 되찾았다',
+  ENDING_ECHO_BREAKOUT: '돔 붕괴 · 요람이 부서지고 첫 숨이 시작된다',
+  ENDING_NEXUS_TRUST: '봉쇄 해제 · NEXUS, 인류를 믿기로 하다',
+  ENDING_JAYNE_ORIGIN: '피험자 #0 식별 · 지워진 이름 복원됨',
+  ENDING_SOLO_EXIT: '소속 없음 · 홀로 도시를 빠져나가다',
+}
 
 // Staged reveal: outro log → 1 sigil+title glitch-in → 2 stats → 3 actions.
 export default function EndingScreen({ endingId, beat, save, onRestart, onCodex }) {
@@ -65,10 +77,11 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
 
   useEffect(() => {
     const timers = []
-    OUTRO_LINES.forEach((ln, i) => timers.push(setTimeout(() => setLines((p) => [...p, ln]), 200 + i * 380)))
-    timers.push(setTimeout(() => setStage(1), 1500)) // sigil + glitch title
-    timers.push(setTimeout(() => setStage(2), 2700)) // stats
-    timers.push(setTimeout(() => setStage(3), 3500)) // actions
+    // 잭아웃 터미널: 로그 타이핑 → 봉인 완료 → 엔딩 카드로.
+    OUTRO_LINES.forEach((ln, i) => timers.push(setTimeout(() => setLines((p) => [...p, ln]), 400 + i * 800)))
+    timers.push(setTimeout(() => setStage(1), 4600)) // 잭아웃 → 엔딩 카드(시길+명대사)
+    timers.push(setTimeout(() => setStage(2), 5800)) // stats
+    timers.push(setTimeout(() => setStage(3), 6600)) // actions
     return () => timers.forEach(clearTimeout)
   }, [])
 
@@ -80,27 +93,54 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
       className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/92 p-4"
       style={{ '--glitch': hidden ? 0.9 : 0.25 }}
     >
+      <CodeRain className="opacity-[0.12]" />
       {/* radial ending glow */}
       <div
         className="pointer-events-none fixed inset-0"
         style={{ background: `radial-gradient(circle at 50% 35%, ${style.glow} 0%, transparent 55%)` }}
       />
 
-      <div className={`intro-up relative w-full max-w-lg rounded-lg border ${style.ring} bg-panel/80 p-8 text-center`}>
-        {/* Jack-out log */}
-        <div className="mx-auto mb-5 h-16 max-w-xs text-left font-mono text-[11px] leading-relaxed text-cyan-300/50">
-          {lines.map((ln, i) => (
-            <div key={i} className="intro-up">
-              {ln}
-              {i === lines.length - 1 && stage < 1 && <span className="animate-pulse">▋</span>}
+      {/* ── PHASE 0: 잭아웃 터미널 (인트로 dossier와 수미상관) ── */}
+      {stage === 0 && (
+        <div className="intro-up font-pixel relative z-10 w-full max-w-md rounded border border-neon-cyan/30 bg-black/60 text-left shadow-[0_0_40px_rgba(34,227,255,0.08)]">
+          <div className="flex items-center justify-between border-b border-neon-cyan/15 px-3 py-1.5 text-[10px] tracking-widest text-neon-cyan/70">
+            <span>NEXUS ARCHIVE // 기억 파일 #00 · 세션 종료</span>
+            <span className="flex items-center gap-1 text-neon-red/70">● <span className="text-cyan-300/40">봉인</span></span>
+          </div>
+          <div className="px-4 py-3 text-[12px] leading-relaxed sm:text-[13px]">
+            <div className="mb-3 flex items-center gap-2 text-[10px] text-neon-green/70">
+              <span className="shrink-0">봉인</span>
+              <div className="h-1 flex-1 overflow-hidden rounded bg-black/60">
+                <div className="h-full bg-neon-green transition-all duration-[1500ms]" style={{ width: `${Math.min(100, 30 + lines.length * 40)}%` }} />
+              </div>
+              <span className="w-8 shrink-0 text-right">{Math.min(100, 30 + lines.length * 40)}%</span>
             </div>
-          ))}
+            {lines.map((ln, i) => (
+              <div key={i} className="cine-in text-cyan-200/70">
+                {ln}
+              </div>
+            ))}
+            {lines.length >= OUTRO_LINES.length && (
+              <>
+                <div className="cine-in mt-2 flex gap-2 border-t border-neon-green/20 pt-2 text-neon-green">
+                  <span className="w-12 shrink-0 whitespace-nowrap text-neon-green/80">[결말]</span>
+                  <span>{OUTRO_RESULT[endingId] || '기록 종료'}</span>
+                </div>
+                <div className="cine-in mt-2 text-[12px] tracking-wider text-cyan-100/80">
+                  &gt; 기억 파일 봉인 완료.<span className="animate-pulse">▋</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Stage 1: sigil + glitch title (bookends the intro) */}
-        {stage >= 1 && (
-          <div className="intro-up">
-            <div className={`mb-3 text-6xl ${style.accent} ${hidden ? 'glitch-flicker' : ''}`}>{style.sigil}</div>
+      {/* ── PHASE 1: 엔딩 카드 ── */}
+      {stage >= 1 && (
+      <div className={`intro-up relative z-10 w-full max-w-lg rounded-lg border ${style.ring} bg-panel/80 p-8 text-center`}>
+        {/* sigil + glitch title (bookends the intro) */}
+        <div className="intro-up">
+          <div className={`mb-3 text-6xl ${style.accent} ${hidden ? 'glitch-flicker' : ''}`}>{style.sigil}</div>
             {hidden && (
               <div className={`mb-2 text-[10px] tracking-[0.4em] ${style.accent}`}>◆ HIDDEN ENDING UNLOCKED ◆</div>
             )}
@@ -108,13 +148,12 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
               {scene?.title || 'ENDING'}
             </h2>
             <p className="mb-5 text-xs italic tracking-wider text-cyan-200/60">“{style.epigraph}”</p>
-            <p className="mx-auto mb-6 max-w-md whitespace-pre-wrap text-sm leading-relaxed text-cyan-100">
-              {beat?.npc_response}
-            </p>
-          </div>
-        )}
+          <p className="mx-auto mb-6 max-w-md whitespace-pre-wrap text-sm leading-relaxed text-cyan-100">
+            {beat?.npc_response}
+          </p>
+        </div>
 
-        {/* Stage 2: run stats */}
+        {/* run stats */}
         <div
           className={`mb-6 transition-opacity duration-700 ${stage >= 2 ? 'opacity-100' : 'opacity-0'}`}
         >
@@ -184,6 +223,7 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
             : `AETHERIA::2099 — ${ENDING_COUNT - col.discovered.length}개의 결말이 아직 어둠 속에 있다.`}
         </p>
       </div>
+      )}
     </div>
   )
 }
