@@ -1,5 +1,3 @@
-import { Eye, Heart, Satellite, BookLock } from 'lucide-react'
-
 // 첫 플레이 온보딩 — 게이지/추적/증거 규칙을 짧게 브리핑(1회, localStorage 기억).
 export default function TutorialOverlay({ onClose }) {
   return (
@@ -13,30 +11,18 @@ export default function TutorialOverlay({ onClose }) {
         </p>
 
         <ul className="space-y-3 text-[13px] leading-relaxed text-cyan-100/90">
-          <li className="flex gap-3">
-            <span className="mt-0.5 flex shrink-0 gap-1 text-neon-amber">
-              <Eye size={14} />
-              <Heart size={14} className="text-neon-green" />
-            </span>
-            <div>
-              <b>관계 게이지</b> — 선택이 상대의 <span className="text-neon-amber">의심</span>·
-              <span className="text-neon-green">호감</span>을 바꾼다. 한쪽을 도우면 라이벌이 경계한다
-              <span className="text-cyan-300/50"> (트레이드오프)</span>.
-            </div>
+          <li>
+            <b>관계 게이지</b> — 선택이 상대의 <span className="text-neon-amber">의심</span>·
+            <span className="text-neon-green">호감</span>을 바꾼다. 한쪽을 도우면 라이벌이 경계한다
+            <span className="text-cyan-300/50"> (트레이드오프)</span>.
           </li>
-          <li className="flex gap-3">
-            <Satellite size={14} className="mt-0.5 shrink-0 text-neon-magenta" />
-            <div>
-              <b>NEXUS 추적</b> — 해킹·폭로 같은 눈에 띄는 행동은 추적을 올리고, 잠행은 내린다.
-              <b className="text-neon-red"> 100이면 드론 급습(체포)</b>.
-            </div>
+          <li>
+            <b>NEXUS 추적</b> — 해킹·폭로 같은 눈에 띄는 행동은 추적을 올리고, 잠행은 내린다.
+            <b className="text-neon-red"> 100이면 드론 급습(체포)</b>.
           </li>
-          <li className="flex gap-3">
-            <BookLock size={14} className="mt-0.5 shrink-0 text-neon-cyan" />
-            <div>
-              <b>기억 조각 = 증거</b> — 모은 조각을 결정적 순간 제시하면 관계가 크게 흔들린다.
-              엉뚱하게 쓰면 역효과.
-            </div>
+          <li>
+            <b>기억 조각 = 증거</b> — 모은 조각을 결정적 순간 제시하면 관계가 크게 흔들린다.
+            엉뚱하게 쓰면 역효과.
           </li>
         </ul>
 

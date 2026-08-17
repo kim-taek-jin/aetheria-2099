@@ -325,9 +325,12 @@ export function safeParse(text) {
 function stripHanja(s) {
   if (typeof s !== 'string') return s
   // \u escapes only (ASCII source) so ranges can't be mangled on save.
-  // CJK Ext-A, CJK Unified, CJK Compatibility Ideographs; + fullwidth parens.
   return s
+    // CJK Ext-A, CJK Unified, CJK Compatibility Ideographs
     .replace(/[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g, '')
+    // CJK symbols/punctuation (U+3000-303F) + fullwidth forms (U+FF01-FF60):
+    // strips leaked Chinese punctuation like \uFF0C\u3002\u3001\uFF08\uFF09\u2014 small-model defense.
+    .replace(/[\u3000-\u303F\uFF01-\uFF60]/g, '')
     .replace(/[\uFF08(]\s*[)\uFF09]/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim()

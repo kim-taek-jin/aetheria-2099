@@ -1,7 +1,13 @@
 // scenes.js — 결정론적 엔딩 게이트(eligibleEndings) 테스트.
 // 시스템(호감/의심/추적/조각)이 "열리는 엔딩"을 실제로 결정하는지 검증.
 import { describe, it, expect } from 'vitest'
-import { eligibleEndings, isEnding } from '../src/game/scenes.js'
+import {
+  eligibleEndings,
+  isEnding,
+  sceneAnchor,
+  remainingEstimate,
+  fullPlaythroughEstimate,
+} from '../src/game/scenes.js'
 
 const rel = (o = {}) => ({
   Ren: { suspicion: 0, affinity: 0 },
@@ -68,5 +74,52 @@ describe('eligibleEndings', () => {
     const save = { relationships: rel({ Ren: { suspicion: 0, affinity: 70 } }) }
     const out = eligibleEndings(save)
     expect(out.length).toBe(new Set(out).size)
+  })
+})
+
+describe('sceneAnchor', () => {
+  it('노드의 앵커 구조를 담는다', () => {
+    const a = sceneAnchor('PROLOGUE_RAIN_01', 0)
+    expect(a).toContain('NODE PROLOGUE_RAIN_01')
+    expect(a).toContain('STAGE_NPC:')
+    expect(a).toContain('GOAL:')
+    expect(a).toContain('ALLOWED_NEXT:')
+  })
+  it('무효 노드는 빈 문자열', () => {
+    expect(sceneAnchor('NOPE')).toBe('')
+  })
+  it('턴이 예산 미만이면 계속 전개 지시', () => {
+    // ACT1_REN_GARAGE_01 은 beatBudget 2 → turn 1/2 는 아직 여유.
+    expect(sceneAnchor('ACT1_REN_GARAGE_01', 0)).toContain('keep developing')
+  })
+  it('턴이 예산에 도달하면 이동 지시', () => {
+    expect(sceneAnchor('ACT1_REN_GARAGE_01', 20)).toContain('budget reached')
+  })
+  it('엔딩 노드는 ALLOWED_NEXT 없음', () => {
+    expect(sceneAnchor('ENDING_SOLO_EXIT', 0)).toContain('none')
+  })
+})
+
+describe('remainingEstimate', () => {
+  it('시작 노드는 남은 턴/분이 양수', () => {
+    const r = remainingEstimate('PROLOGUE_RAIN_01', 0)
+    expect(r.turns).toBeGreaterThan(0)
+    expect(r.minutes).toBeGreaterThanOrEqual(1)
+  })
+  it('무효 노드는 0', () => {
+    expect(remainingEstimate('NOPE')).toEqual({ turns: 0, minutes: 0 })
+  })
+  it('같은 노드에 오래 있을수록 남은 턴이 줄어든다', () => {
+    const a = remainingEstimate('PROLOGUE_RAIN_01', 0).turns
+    const b = remainingEstimate('PROLOGUE_RAIN_01', 2).turns
+    expect(b).toBeLessThanOrEqual(a)
+  })
+})
+
+describe('fullPlaythroughEstimate', () => {
+  it('전체 플레이 추정이 양수', () => {
+    const r = fullPlaythroughEstimate()
+    expect(r.turns).toBeGreaterThan(0)
+    expect(r.minutes).toBeGreaterThan(0)
   })
 })

@@ -24,7 +24,7 @@ DATA_PATH = "train.jsonl"
 from unsloth import FastLanguageModel
 import torch
 
-MAX_SEQ = 4096  # 우리 예제는 앵커 포함 ~2k토큰이라 4096이면 충분
+MAX_SEQ = 3072  # 우리 예제는 앵커 포함 ~2k토큰이라 4096이면 충분
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name="unsloth/Qwen2.5-7B-Instruct-bnb-4bit",  # 3B→7B 상향(한국어·일관성↑)
     max_seq_length=MAX_SEQ,
@@ -77,7 +77,7 @@ trainer = SFTTrainer(
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,   # 유효 배치 8
         warmup_steps=10,
-        num_train_epochs=3,              # 데이터 285개로 적음 → 3 에폭
+        num_train_epochs=2,              # 데이터 560개 → 2 에폭이면 충분(속도↑)
         learning_rate=2e-4,
         logging_steps=10,
         optim="adamw_8bit",
