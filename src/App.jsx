@@ -75,6 +75,7 @@ export default function App() {
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
   const [beat, setBeat] = useState(OPENING)
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState(null) // 로컬 생성 중 실시간 부분 텍스트
   const [showEnding, setShowEnding] = useState(false)
   const [demoIndex, setDemoIndex] = useState(-1) // -1 = on OPENING; >=0 = DEMO_BEATS index
   // Diegetic boot sequence — plays on first visit only (remembered in storage).
@@ -189,11 +190,13 @@ export default function App() {
       return
     }
     setLoading(true)
+    setStreaming(null)
     abortRef.current?.abort()
     abortRef.current = new AbortController()
 
     // 하이브리드 라우팅: 키 있으면 클라우드, 없으면 로컬. 클라우드가 일시적으로
     // 막히면(무료 티어 한도 등) 로컬 자체모델로 자동 전환해 플레이가 끊기지 않게.
+    // onPartial: 로컬 생성 중 부분 텍스트를 받아 화면에 흘려보낸다(대기 체감↓).
     const { res, via } = await routeBeat({
       apiKey: effKey, // 로컬 전용이면 빈 값 → 클라우드 건너뛰고 로컬만
       ollamaOn,
@@ -202,8 +205,10 @@ export default function App() {
       signal: abortRef.current.signal,
       gemini: generateBeat,
       local: generateBeatLocal,
+      onPartial: setStreaming,
     })
     setFellBack(via === 'local-fallback') // 이 턴에 로컬로 전환됐는지 표시
+    setStreaming(null) // 최종 비트로 대체
 
     const data = res.ok ? res.data : emergencyBeat(save, res.code)
     if (!res.ok && audioOn) glitchBurst()
@@ -413,7 +418,7 @@ export default function App() {
         </div>
       )}
 
-      <MainScreen beat={beat} glitch={glitch} loading={loading} />
+      <MainScreen beat={beat} glitch={glitch} loading={loading} streaming={streaming} />
 
       <InteractionPanel
         choices={beat?.generated_choices}

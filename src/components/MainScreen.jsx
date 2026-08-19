@@ -9,12 +9,16 @@ const NPC_COLOR = {
 }
 
 // Typing-effect dialogue with glitch intensity driven by background tone.
-export default function MainScreen({ beat, glitch, loading }) {
+// streaming(있을 때): 로컬 모델이 생성하는 부분 텍스트 — 토큰이 자라는 것 자체가
+// 타이핑이라, 인터벌 타이핑을 건너뛰고 받은 만큼 바로 보여준다(대기 체감↓).
+export default function MainScreen({ beat, glitch, loading, streaming }) {
   const [shown, setShown] = useState('')
   const scrollRef = useRef(null)
+  const streamingLive = !!(streaming && (streaming.narration || streaming.npc_response))
   const full = beat?.npc_response || ''
 
   useEffect(() => {
+    if (streamingLive) return // 스트리밍 중엔 인터벌 타이핑을 쓰지 않음
     setShown('')
     if (!full) return
     let i = 0
@@ -26,8 +30,15 @@ export default function MainScreen({ beat, glitch, loading }) {
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }, 18)
     return () => clearInterval(id)
-  }, [full])
+  }, [full, streamingLive])
 
+  // 스트리밍 중이면 부분 텍스트를, 아니면 확정 비트를 표시.
+  const view = streamingLive ? streaming : beat
+  const narration = view?.narration
+  const npcName = view?.npc_name
+  const npcResponse = view?.npc_response || ''
+  const dialogueText = streamingLive ? npcResponse : shown
+  const typingCursor = streamingLive ? loading : shown.length < full.length
   const isGlitch = beat?.background_tone === 'Forest_Glitch'
 
   return (
@@ -43,28 +54,29 @@ export default function MainScreen({ beat, glitch, loading }) {
       )}
 
       {/* Narration — situational, no speaker. Dimmer + italic + left rule. */}
-      {beat?.narration && (
+      {narration && (
         <p className="mb-4 border-l-2 border-cyan-500/30 pl-3 text-[13px] italic leading-relaxed text-cyan-300/70">
-          {beat.narration}
+          {narration}
         </p>
       )}
 
       {/* Dialogue — only when someone actually speaks. */}
-      {full && (
+      {npcResponse && (
         <>
-          <div className={`mb-2 text-xs font-bold tracking-widest ${NPC_COLOR[beat?.npc_name] || 'text-neon-cyan'}`}>
-            {beat?.npc_name || 'SYSTEM'} <span className="text-cyan-300/40">// {beat?.npc_emotion}</span>
+          <div className={`mb-2 text-xs font-bold tracking-widest ${NPC_COLOR[npcName] || 'text-neon-cyan'}`}>
+            {npcName || 'SYSTEM'} <span className="text-cyan-300/40">// {view?.npc_emotion}</span>
           </div>
           <p
             className={`whitespace-pre-wrap text-[15px] leading-relaxed ${isGlitch ? 'chroma text-neon-green' : 'text-cyan-100'}`}
           >
-            {shown}
-            {shown.length < full.length && <span className="animate-pulse">▋</span>}
+            {dialogueText}
+            {typingCursor && <span className="animate-pulse">▋</span>}
           </p>
         </>
       )}
 
-      {loading && (
+      {/* 아직 아무 텍스트도 안 왔을 때만 대기 표시(스트리밍 첫 토큰 전). */}
+      {loading && !streamingLive && (
         <p className="mt-4 animate-pulse text-xs tracking-widest text-neon-cyan/70">
           ▓ NEXUS 연산 중 · 데이터 스트림 수신 ▓
         </p>
