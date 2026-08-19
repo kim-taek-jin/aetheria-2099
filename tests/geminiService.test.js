@@ -79,6 +79,30 @@ describe('normalize — 한자 제거', () => {
   })
 })
 
+describe('normalize — story_branch 점프 방어', () => {
+  it('허용되지 않은 노드로의 점프는 현재 노드로 고정', () => {
+    // PROLOGUE_RAIN_01 의 허용 후속이 아닌 엔딩으로 점프 시도 → 차단.
+    const n = normalize({ story_branch: 'ENDING_NEXUS_TRUST' }, save)
+    expect(n.story_branch).toBe('PROLOGUE_RAIN_01')
+  })
+  it('허용된 후속 노드는 통과', () => {
+    const n = normalize({ story_branch: 'ACT1_REN_GARAGE_01' }, save)
+    expect(n.story_branch).toBe('ACT1_REN_GARAGE_01')
+  })
+  it('현재 노드 유지도 허용', () => {
+    const n = normalize({ story_branch: 'PROLOGUE_RAIN_01' }, save)
+    expect(n.story_branch).toBe('PROLOGUE_RAIN_01')
+  })
+})
+
+describe('normalize — 뭉개짐 교정', () => {
+  it('"저스로"를 "스스로"로 교정', () => {
+    const n = normalize({ npc_response: '그럼 저스로 값을 매겨' }, save)
+    expect(n.npc_response).toContain('스스로')
+    expect(n.npc_response).not.toContain('저스로')
+  })
+})
+
 describe('normalize — set_flags / evidence_result', () => {
   it('flag는 [a-z0-9_]만 통과, 최대 6개', () => {
     const flags = ['ok_1', 'bad flag', '한글', 'x'.repeat(3), 'a', 'b', 'c', 'd', 'e', 'f', 'g']

@@ -355,6 +355,21 @@ function capChoice(s) {
   return (sp > 20 ? cut.slice(0, sp) : cut).trim() + '…'
 }
 
+// story_branch를 "현재 노드의 허용 후속"으로만 제한한다(불법 점프 방어).
+// 소형 모델이 Act2 → ENDING처럼 몇 단계를 건너뛰는 걸 막는다. 엔딩 선택 노드에선
+// 자격을 갖춘 엔딩만 허용. 그 외엔 현재 노드에 머문다.
+function validBranch(proposed, save) {
+  const cur = save.currentNode
+  const scene = SCENES[cur]
+  if (!scene) return okEnumStr(proposed, STORY_NODES, cur)
+  const allowed = new Set([cur, ...(scene.next || [])])
+  if (scene.endingChoiceNode) for (const e of eligibleEndings(save)) allowed.add(e)
+  return allowed.has(proposed) ? proposed : cur
+}
+function okEnumStr(v, arr, fb) {
+  return arr.includes(v) ? v : fb
+}
+
 // Coerce/clamp anything the schema somehow let through (2nd defense line).
 export function normalize(p, save) {
   const okEnum = (v, arr, fb) => (arr.includes(v) ? v : fb)
@@ -376,7 +391,7 @@ export function normalize(p, save) {
     suspicion_change: clampInt(p.suspicion_change),
     affinity_change: clampInt(p.affinity_change),
     heat_change: clampInt(p.heat_change),
-    story_branch: okEnum(p.story_branch, STORY_NODES, save.currentNode),
+    story_branch: validBranch(p.story_branch, save),
     background_tone: okEnum(p.background_tone, TONES, save.backgroundTone),
     updated_summary: typeof p.updated_summary === 'string' ? p.updated_summary : undefined,
     new_fragments: Array.isArray(p.new_fragments) ? p.new_fragments.filter((x) => typeof x === 'string') : [],
