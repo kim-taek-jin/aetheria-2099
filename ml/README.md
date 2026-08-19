@@ -48,6 +48,25 @@ Colab 새 노트북 → **런타임 유형: T4 GPU** → 파일의 `# %%` 블록
 - 기법: **QLoRA(4bit)** + **Unsloth**(T4에서 빠름), assistant JSON만 손실 계산.
 - 산출: LoRA 어댑터 → **GGUF(q4_k_m)** 로 내보내 다운로드.
 
+## 1b단계 — 멀티턴 데이터 (턴 간 반복의 근본 해결) · `make-conversations.mjs`
+
+단일턴 학습쌍만으로는 모델이 "직전 대사를 보고 다르게 말하는 법"을 못 배워 턴 간
+반복이 난다. 그래서 교사가 **각 장면을 실제 게임처럼 K턴 이어 플레이**한 대화를 학습에 쓴다.
+
+```bash
+# 1) 대화 시드 생성(시작 노드 + 초기 상태 + K개 플레이어 입력)
+M=48 K=4 node ml/make-conversations.mjs        # → ml/conversations.jsonl
+
+# 2) 교사(Workflow 서브에이전트)가 각 시드를 K턴 이어 플레이 → ml/beats-conv.jsonl
+#    각 줄 { id, beats:[K] }. 매 턴 직전 대사를 알고 다르게 응답하도록 지시.
+
+# 3) 게임 루프로 재생해 "문맥(recent_turns) 포함" 학습쌍 조립
+node ml/assemble-conversations.mjs             # → ml/dataset.jsonl (append)
+```
+
+assemble는 initialState부터 `applyResponse`로 상태를 진행시켜, 매 턴 입력에 직전 턴들이
+누적된다(= 게임 실행과 동일한 문맥). 이 예시들이 반복·에코를 소스에서 없앤다.
+
 ## 2b단계 — 맥 로컬 MLX 파인튜닝 (현재 경로) · `lora_config.yaml`
 
 Colab이 런타임 끊김·저장 실패로 학습을 유실해 **맥 로컬(Apple Silicon) MLX**로 전환.
