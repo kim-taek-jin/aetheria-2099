@@ -12,3 +12,11 @@ ml/outputs/
 ml/aetheria-*/
 ml/key.env
 *.gguf
+
+# ML 학습/다운로드 로그·중간 산출물
+ml/*.log
+ml/fused*/
+ml/qwen7b-*/
+ml/adapters*/
+ml/mlx-data/
+ml/Modelfile.*
