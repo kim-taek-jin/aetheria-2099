@@ -51,7 +51,15 @@ export async function generateBeat({ save, playerInput, signal, onPartial, url =
     // 온도가 높으면 문장이 늘어지고 흐트러진다 → 0.65로 낮춰 간결·일관성↑.
     // num_predict는 실제 JSON 길이(~350토큰)에 여유를 둔 상한 — 낮출수록 장황 응답의
     // 최악 지연이 줄어든다. keep_alive로 모델을 메모리에 상주시켜 재로딩 지연 방지.
-    options: { temperature: 0.65, top_p: 0.9, num_predict: 600 },
+    // repeat_penalty/last_n: 소형 모델이 직전 대사·주제를 그대로 되풀이하는 루프를 억제
+    // (예: Ren이 "담보/대가/원칙"만 반복). 너무 높이면 한국어가 어색해져 1.3에서 균형.
+    options: {
+      temperature: 0.7,
+      top_p: 0.9,
+      num_predict: 600,
+      repeat_penalty: 1.3,
+      repeat_last_n: 256,
+    },
     keep_alive: '30m',
   }
 

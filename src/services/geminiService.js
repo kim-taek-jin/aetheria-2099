@@ -322,18 +322,26 @@ export function safeParse(text) {
 
 // Strip stray CJK Han characters (한자) the model may slip in, and clean up
 // any empty "()" glosses left behind (e.g. "압류(押留)" -> "압류").
+// \uC18C\uD615 \uBAA8\uB378\uC774 \uBC18\uBCF5\uC801\uC73C\uB85C \uB9CC\uB4DC\uB294 \uD2B9\uC815 \uBB49\uAC1C\uC9D0 \uAD50\uC815(\uB370\uC774\uD130\uC5D4 0\uBC88, \uC815\uB2F5\uC774 \uBA85\uD655\uD55C \uAC83\uB9CC).
+// \uC608: "\uC800\uC2A4\uB85C"\uB294 "\uC2A4\uC2A4\uB85C"\uC758 \uB514\uCF54\uB529 \uC624\uB958(\uD559\uC2B5\uC14B 0 / "\uC2A4\uC2A4\uB85C" 736\uD68C).
+function fixGarbles(s) {
+  return s.replace(/\uC800\uC2A4\uB85C/g, '\uC2A4\uC2A4\uB85C')
+}
+
 function stripHanja(s) {
   if (typeof s !== 'string') return s
   // \u escapes only (ASCII source) so ranges can't be mangled on save.
-  return s
-    // CJK Ext-A, CJK Unified, CJK Compatibility Ideographs
-    .replace(/[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g, '')
-    // CJK symbols/punctuation (U+3000-303F) + fullwidth forms (U+FF01-FF60):
-    // strips leaked Chinese punctuation like \uFF0C\u3002\u3001\uFF08\uFF09\u2014 small-model defense.
-    .replace(/[\u3000-\u303F\uFF01-\uFF60]/g, '')
-    .replace(/[\uFF08(]\s*[)\uFF09]/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
+  return fixGarbles(
+    s
+      // CJK Ext-A, CJK Unified, CJK Compatibility Ideographs
+      .replace(/[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g, '')
+      // CJK symbols/punctuation (U+3000-303F) + fullwidth forms (U+FF01-FF60):
+      // strips leaked Chinese punctuation like \uFF0C\u3002\u3001\uFF08\uFF09\u2014 small-model defense.
+      .replace(/[\u3000-\u303F\uFF01-\uFF60]/g, '')
+      .replace(/[\uFF08(]\s*[)\uFF09]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  )
 }
 
 // Keep choices menu-short: a label + terse phrase. Long, rambling options are
