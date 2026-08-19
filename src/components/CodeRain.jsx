@@ -16,7 +16,9 @@ export default function CodeRain({ className = 'opacity-[0.16]' }) {
       drops = Array.from({ length: cols }, () => Math.random() * H)
     }
     resize()
-    const draw = () => {
+    // 접근성: 모션 최소 설정이면 흐르는 애니메이션 대신 정적 한 프레임만.
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const paint = () => {
       ctx.fillStyle = 'rgba(3,7,12,0.22)'
       ctx.fillRect(0, 0, W, H)
       ctx.font = '13px monospace'
@@ -26,9 +28,17 @@ export default function CodeRain({ className = 'opacity-[0.16]' }) {
         drops[i] += 5 + Math.random() * 6
         if (drops[i] > H) drops[i] = Math.random() * -120
       }
+    }
+    const draw = () => {
+      paint()
       raf = requestAnimationFrame(draw)
     }
-    draw()
+    if (reduce) {
+      // 정적 텍스처: 화면을 한 번 채워 흐름 없이 잔상만 남긴다.
+      for (let f = 0; f < 40; f++) paint()
+    } else {
+      draw()
+    }
     window.addEventListener('resize', resize)
     return () => {
       cancelAnimationFrame(raf)
