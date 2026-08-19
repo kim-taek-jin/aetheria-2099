@@ -5,7 +5,7 @@ Gemini를 **증류(distillation)** 해 작은 로컬 모델(Qwen2.5-3B)로 파�
 (웹 라이브는 BYOK/데모 유지 — 3B는 Vercel/브라우저에서 못 돌림.)
 
 ```
-Gemini(교사) → 데이터셋 생성 → Colab QLoRA 파인튜닝 → 평가 → GGUF → Ollama 번들
+교사(Claude/Gemini) → 데이터셋 생성 → QLoRA 파인튜닝(맥 로컬 MLX ‖ Colab) → 평가 → GGUF → Ollama 번들
 ```
 
 > ⚠️ 현실 눈높이: 잘 튜닝해도 3B는 Gemini-flash보다 품질↓. 목표는 "Gemini급"이
@@ -48,17 +48,53 @@ Colab 새 노트북 → **런타임 유형: T4 GPU** → 파일의 `# %%` 블록
 - 기법: **QLoRA(4bit)** + **Unsloth**(T4에서 빠름), assistant JSON만 손실 계산.
 - 산출: LoRA 어댑터 → **GGUF(q4_k_m)** 로 내보내 다운로드.
 
-## 3단계 — 평가 (다음 작업)
+## 2b단계 — 맥 로컬 MLX 파인튜닝 (현재 경로) · `lora_config.yaml`
 
-`ml/eval.mjs`(예정): 홀드아웃 예제로 **JSON 파싱 성공률 / 스키마·enum 준수 /
-노드 유효성 / 한국어 전용 / 톤 일치** 를 측정해 Gemini·베이스와 비교.
+Colab이 런타임 끊김·저장 실패로 학습을 유실해 **맥 로컬(Apple Silicon) MLX**로 전환.
+끊김·비용 0, 파일이 로컬에 남는다. 도구는 Unsloth(CUDA 전용) 대신 **MLX**.
 
-## 4단계 — 서빙 & 게임 연결 (다음 작업)
+```bash
+# 0) 설치 (MLX는 Apple Silicon 전용)
+python3 -m pip install -U mlx-lm --break-system-packages
 
-1. GGUF를 Ollama에 등록: `ollama create aetheria -f Modelfile`
-2. `src/services/` 에 **프로바이더 어댑터**(`ollamaProvider.js`) 추가 —
-   `generateBeat`와 같은 시그니처로, `localhost:11434`에 요청.
-3. 키 없으면 Ollama 사용하도록 분기(데스크톱 빌드). 웹은 기존대로.
+# 1) 베이스 모델 — huggingface_hub이 대형 파일에서 멈추면 curl로 직접 받아
+#    ml/qwen7b-4bit/ 로컬 폴더 구성 후 --model 에 경로 전달
+#    (mlx-community/Qwen2.5-7B-Instruct-4bit)
+
+# 2) 데이터: train.jsonl/eval.jsonl 의 {messages:[...]} 를 mlx-data/ 에
+#    train.jsonl + valid.jsonl 로 배치 (포맷 그대로 호환)
+
+# 3) 학습 — 안전선: batch 2 + grad_checkpoint (24GB 통합메모리, Peak ~11GB)
+python3 -m mlx_lm lora -c lora_config.yaml
+#   ⚠️ batch↑ + grad_checkpoint 제거 = 메모리 초과로 시스템 다운. 하지 말 것.
+#   전 층 LoRA(num_layers:-1) + rank16 이 뒤쪽 일부 층보다 준수율↑.
+
+# 4) 잠자기 방지(장시간): caffeinate -i -m -s -w <학습PID>
+```
+
+- 기법: **QLoRA(4bit)**, assistant JSON만 손실 계산, ~2에폭.
+- 산출: LoRA 어댑터(`adapters/`).
+
+## 3단계 — 평가 · `eval.mjs` ✅
+
+홀드아웃 40개로 **JSON 파싱 / 필수필드 / enum / 노드 유효 / 수치범위 / 선택지 /
+한국어 전용** 준수율을 측정. 모델 간 A/B는 `compare-models.mjs`.
+
+```bash
+OLLAMA_MODEL=aetheria node ml/eval.mjs        # 준수율 측정
+```
+
+## 4단계 — 서빙 & 게임 연결 ✅
+
+MLX 어댑터는 `--export-gguf`가 qwen2를 지원 안 하므로 **fp16 병합 → Ollama 등록**:
+
+```bash
+python3 -m mlx_lm fuse --model qwen7b-4bit --adapter-path adapters --save-path fused --dequantize
+ollama create aetheria -q q4_K_M -f Modelfile.new   # fused → q4_K_M 양자화
+```
+
+게임은 `ollamaProvider.js`(= `generateBeat` 동일 시그니처, `localhost:11434`)로 연결되고,
+`aiRouter.js`가 클라우드↔로컬↔데모를 분기한다.
 
 ---
 
