@@ -209,13 +209,19 @@ export function buildContents(save, playerInput) {
   const eligible = SCENES[save.currentNode]?.endingChoiceNode
     ? `\nELIGIBLE_ENDINGS (choose story_branch ONLY from these): ${eligibleEndings(save).join(', ')}\n`
     : ''
+  // 턴 간 반복 억제: 직전 NPC 대사를 짚어 "그대로 되풀이하지 말라"고 명시(소형 모델이
+  // recent_turns의 자기 대사를 그대로 에코하는 경향 방어).
+  const lastLine = [...(save.recentTurns || [])].reverse().find((t) => t?.line)?.line
+  const noRepeat = lastLine
+    ? `\nAVOID_REPEAT: 직전 대사("${String(lastLine).slice(0, 60)}…")의 문구·구조를 반복하지 말고, 새로운 표현으로 장면을 전개하라.\n`
+    : ''
   return [
     {
       role: 'user',
       parts: [
         {
           text:
-            `SCENE_ANCHOR:\n${anchor}\n${eligible}\n` +
+            `SCENE_ANCHOR:\n${anchor}\n${eligible}${noRepeat}\n` +
             `GAME_STATE:\n${JSON.stringify(stateBlock)}\n\n` +
             `PLAYER_ACTION: ${playerInput}\n\n` +
             `Advance the story by one beat, staying inside the SCENE_ANCHOR, and return the JSON object.`,
@@ -364,10 +370,42 @@ function validBranch(proposed, save) {
   if (!scene) return okEnumStr(proposed, STORY_NODES, cur)
   const allowed = new Set([cur, ...(scene.next || [])])
   if (scene.endingChoiceNode) for (const e of eligibleEndings(save)) allowed.add(e)
-  return allowed.has(proposed) ? proposed : cur
+  let branch = allowed.has(proposed) ? proposed : cur
+  // 페이싱 강제: 예산을 채웠는데 모델이 현재 노드에 머물면, 선형(단일 후속) 노드는
+  // 다음으로 강제 전진한다. 분기/엔딩 선택 노드는 플레이어 선택을 보존하려 제외.
+  const budget = scene.beatBudget || 2
+  if (
+    branch === cur &&
+    !scene.endingChoiceNode &&
+    Array.isArray(scene.next) &&
+    scene.next.length === 1 &&
+    (save.turnsOnNode || 0) + 1 >= budget
+  ) {
+    branch = scene.next[0]
+  }
+  return branch
 }
 function okEnumStr(v, arr, fb) {
   return arr.includes(v) ? v : fb
+}
+
+// 톤 enum → 화면에 붙는 고정 한글 라벨. 모델이 임의 라벨("[스카이라인]")을 만들어도
+// 검증된 톤에서 라벨을 다시 붙여 일관성을 강제한다.
+const TONE_LABEL = {
+  Honest: '솔직하게',
+  Deceptive: '기만',
+  Aggressive: '도발',
+  Investigate: '조사',
+  Hack: '해킹',
+  Stealth: '은신',
+  Flee: '도주',
+}
+// 선택지 텍스트에서 앞머리의 [ ... ] 라벨을 떼고, 검증된 톤의 고정 라벨을 다시 붙인다.
+function labelChoice(text, tone) {
+  const body = String(text ?? '…')
+    .replace(/^\s*[\[［][^\]］]*[\]］]\s*/, '')
+    .trim()
+  return `[${TONE_LABEL[tone] || tone}] ${body || '…'}`
 }
 
 // Coerce/clamp anything the schema somehow let through (2nd defense line).
@@ -379,10 +417,10 @@ export function normalize(p, save) {
     const t = CHOICE_TONES[choices.length] || 'Honest'
     choices.push({ text: `[${t}] …`, tone: t })
   }
-  choices = choices.map((c, i) => ({
-    text: capChoice(stripHanja(String(c?.text ?? '…'))),
-    tone: okEnum(c?.tone, CHOICE_TONES, DIALOGUE_TONES[i] || 'Honest'),
-  }))
+  choices = choices.map((c, i) => {
+    const tone = okEnum(c?.tone, CHOICE_TONES, DIALOGUE_TONES[i] || 'Honest')
+    return { text: capChoice(stripHanja(labelChoice(c?.text, tone))), tone }
+  })
   return {
     narration: stripHanja(typeof p.narration === 'string' ? p.narration.slice(0, 1200) : ''),
     npc_name: okEnum(p.npc_name, NPCS, save.activeNpc),
