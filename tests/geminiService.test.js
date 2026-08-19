@@ -1,7 +1,7 @@
 // geminiService.js — AI 출력 방어선(safeParse/normalize) 테스트.
 // 모델이 무엇을 뱉든 게임이 쓰는 안전한 형태로 강제되는지 검증.
 import { describe, it, expect } from 'vitest'
-import { safeParse, normalize } from '../src/services/geminiService.js'
+import { safeParse, normalize, isLowQuality } from '../src/services/geminiService.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
 
 const save = {
@@ -100,6 +100,25 @@ describe('normalize — 뭉개짐 교정', () => {
     const n = normalize({ npc_response: '그럼 저스로 값을 매겨' }, save)
     expect(n.npc_response).toContain('스스로')
     expect(n.npc_response).not.toContain('저스로')
+  })
+})
+
+describe('isLowQuality — 퇴행 출력 감지', () => {
+  it('정상 대사는 통과', () => {
+    expect(isLowQuality('공짜는 없어. 뭘 담보로 걸 건데, 제인?')).toBe(false)
+  })
+  it('너무 짧으면 퇴행', () => {
+    expect(isLowQuality('음.')).toBe(true)
+  })
+  it('토큰 과다반복이면 퇴행', () => {
+    expect(isLowQuality('좋아. 좋아. 좋아. 좋아.')).toBe(true)
+  })
+  it('긴 구절 반복이면 퇴행', () => {
+    expect(isLowQuality('나는 너희를 지켰단다 나는 너희를 지켰단다')).toBe(true)
+  })
+  it('직전 대사를 그대로 에코하면 퇴행', () => {
+    const prev = '나는 너희를 지켰단다. 그게 옳았을까.'
+    expect(isLowQuality('나는 너희를 지켰단다. 그게 옳았을까.', prev)).toBe(true)
   })
 })
 

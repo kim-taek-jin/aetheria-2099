@@ -361,6 +361,32 @@ function capChoice(s) {
   return (sp > 20 ? cut.slice(0, sp) : cut).trim() + '…'
 }
 
+// 로컬 소형 모델의 "퇴행 출력"을 감지한다(자가 치유 재생성 트리거).
+// 너무 짧음 / 토큰 과다반복 / 긴 구절 반복 / 직전 대사 에코를 잡는다.
+export function isLowQuality(npcResponse, prevLine) {
+  const s = String(npcResponse || '').trim()
+  if (s.length < 6) return true // 사실상 빈 대사
+  // 토큰 과다반복: 길이 2+ 토큰이 4회 이상 등장(예: "좋아. 좋아. 좋아. 좋아.")
+  const toks = s.split(/\s+/).filter((t) => t.length >= 2)
+  const freq = {}
+  for (const t of toks) {
+    freq[t] = (freq[t] || 0) + 1
+    if (freq[t] >= 4) return true
+  }
+  // 긴 구절 반복: 10자 창이 문자열 내에서 2회 이상 등장.
+  for (let i = 0; i + 10 <= s.length; i += 5) {
+    const win = s.slice(i, i + 10)
+    if (win.trim().length >= 8 && s.indexOf(win, i + 10) !== -1) return true
+  }
+  // 직전 대사 에코: 앞 24자가 거의 동일.
+  if (prevLine) {
+    const a = s.replace(/\s/g, '').slice(0, 24)
+    const b = String(prevLine).replace(/\s/g, '').slice(0, 24)
+    if (a.length >= 12 && a === b) return true
+  }
+  return false
+}
+
 // story_branch를 "현재 노드의 허용 후속"으로만 제한한다(불법 점프 방어).
 // 소형 모델이 Act2 → ENDING처럼 몇 단계를 건너뛰는 걸 막는다. 엔딩 선택 노드에선
 // 자격을 갖춘 엔딩만 허용. 그 외엔 현재 노드에 머문다.
