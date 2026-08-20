@@ -335,11 +335,11 @@ export default function App() {
   return (
     <div className="crt flex h-screen flex-col gap-2 p-2 sm:p-3" style={{ '--glitch': glitch }}>
       {/* ---- Top bar ---- */}
-      <header className="flex items-center justify-between px-1">
-        <h1 className="text-sm font-extrabold tracking-[0.3em] text-neon-cyan chroma">
+      <header className="flex items-center justify-between gap-2 px-1">
+        <h1 className="shrink truncate text-xs font-extrabold tracking-[0.12em] text-neon-cyan chroma sm:text-sm sm:tracking-[0.3em]">
           AETHERIA<span className="text-neon-magenta">::</span>2099
         </h1>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <IconBtn title="사운드" onClick={toggleAudio}>
             {audioOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </IconBtn>
