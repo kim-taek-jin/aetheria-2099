@@ -23,3 +23,7 @@ ml/Modelfile.*
 
 # 트레일러 캡처 생성물
 trailer-assets/
+
+# 플레이테스트/트레일러 산출물
+playtest-report.json
+trailer-assets/
