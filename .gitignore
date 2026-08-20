@@ -20,3 +20,6 @@ ml/qwen7b-*/
 ml/adapters*/
 ml/mlx-data/
 ml/Modelfile.*
+
+# 트레일러 캡처 생성물
+trailer-assets/
