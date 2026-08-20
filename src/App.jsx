@@ -48,6 +48,23 @@ const storage = {
       /* quota / private mode — ignore */
     }
   },
+  // 현재 화면 비트도 저장 — 리로드해도 진행 중이던 씬 텍스트가 살아남게.
+  loadBeat: () => {
+    try {
+      const raw = localStorage.getItem('aetheria2099.beat.v1')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  },
+  writeBeat: (beat) => {
+    try {
+      if (beat) localStorage.setItem('aetheria2099.beat.v1', JSON.stringify(beat))
+      else localStorage.removeItem('aetheria2099.beat.v1')
+    } catch {
+      /* ignore */
+    }
+  },
   loadKey: () => {
     try {
       return localStorage.getItem(API_KEY_STORAGE) || ''
@@ -73,7 +90,7 @@ export default function App() {
   const [audioOn, setAudioOn] = useState(false)
 
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
-  const [beat, setBeat] = useState(OPENING)
+  const [beat, setBeat] = useState(() => storage.loadBeat() || OPENING)
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(null) // 로컬 생성 중 실시간 부분 텍스트
   const [showEnding, setShowEnding] = useState(false)
@@ -136,6 +153,11 @@ export default function App() {
   useEffect(() => {
     storage.writeSave(save)
   }, [save])
+
+  // 현재 비트도 저장 — 리로드 시 진행 중이던 씬이 복원되게(스트리밍 부분값은 제외).
+  useEffect(() => {
+    if (!loading) storage.writeBeat(beat)
+  }, [beat, loading])
 
   // Bind ambience to current background tone.
   useEffect(() => {
@@ -303,6 +325,7 @@ export default function App() {
     const fresh = withStamp(createNewGame())
     setSave(fresh)
     setBeat(OPENING)
+    storage.writeBeat(null) // 새 게임 — 저장된 비트 제거
     setShowEnding(false)
     setDemoIndex(-1)
     setFellBack(false)

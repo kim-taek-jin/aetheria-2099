@@ -101,6 +101,15 @@ describe('normalize — 뭉개짐 교정', () => {
     expect(n.npc_response).toContain('스스로')
     expect(n.npc_response).not.toContain('저스로')
   })
+  it('문자열에 새어든 JSON 필드 경계를 잘라낸다', () => {
+    const n = normalize({ npc_response: '녹이겠다","new_fragments":[' }, save)
+    expect(n.npc_response).toBe('녹이겠다')
+    expect(n.npc_response).not.toContain('new_fragments')
+  })
+  it('정상 대사의 따옴표는 보존한다', () => {
+    const n = normalize({ npc_response: '그는 말했다. "돌아가라"' }, save)
+    expect(n.npc_response).toContain('"돌아가라"')
+  })
 })
 
 describe('isLowQuality — 퇴행 출력 감지', () => {
