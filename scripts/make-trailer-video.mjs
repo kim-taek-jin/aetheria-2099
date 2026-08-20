@@ -32,13 +32,16 @@ const seq = []
 let i = 0
 const add = (fn) => { const o = `${TMP}/${String(++i).padStart(2, '0')}.mp4`; fn(o); seq.push(o) }
 
-add((o) => stillSeg(P('01-opening.png'), 3.0, o))                 // 훅: 이게 게임이다
-add((o) => clipSeg(P('video/gameplay.webm'), 4, 7, o))           // AI가 실시간으로 씀(타이핑 모션)
-add((o) => stillSeg(P('11-faction-ren.png'), 2.0, o))            // 세력: 렌(자본)
-add((o) => stillSeg(P('12-faction-kael.png'), 2.0, o))           // 세력: 카엘(질서)
-add((o) => stillSeg(P('13-faction-echo.png'), 2.0, o))           // 세력: 에코(자유)
-add((o) => stillSeg(P('15-ending-ENDING_ECHO_BREAKOUT-card.png'), 3.0, o))  // 결말
-add((o) => stillSeg(P('17-ending-ENDING_JAYNE_ORIGIN-card.png'), 3.2, o))   // 진엔딩
+add((o) => clipSeg('public/intro.mp4', 0, 9, o))                 // 시네마틱 인트로(훅)
+add((o) => stillSeg(P('00-title.png'), 2.4, o))                  // 글리치 타이틀 카드
+add((o) => stillSeg(P('01-opening.png'), 2.4, o))                // 이게 게임이다
+add((o) => clipSeg(P('video/gameplay.webm'), 4, 6, o))           // AI가 실시간으로 씀(타이핑 모션)
+add((o) => stillSeg(P('11-faction-ren.png'), 1.8, o))            // 세력: 렌(자본)
+add((o) => stillSeg(P('12-faction-kael.png'), 1.8, o))           // 세력: 카엘(질서)
+add((o) => stillSeg(P('13-faction-echo.png'), 1.8, o))           // 세력: 에코(자유)
+add((o) => stillSeg(P('15-ending-ENDING_ECHO_BREAKOUT-card.png'), 2.8, o))  // 결말
+add((o) => stillSeg(P('17-ending-ENDING_JAYNE_ORIGIN-card.png'), 3.0, o))   // 진엔딩
+add((o) => stillSeg(P('00-title.png'), 3.0, o))                  // 타이틀 마무리(CTA 여지)
 
 // ---- concat ----
 const listFile = `${TMP}/list.txt`
