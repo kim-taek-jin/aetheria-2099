@@ -497,7 +497,7 @@ export function eligibleEndings(save) {
   const maxA = Math.max(...factions.map(A))
   const top = factions.find((n) => A(n) === maxA)
   const gapCount = (save.fragments || []).filter((f) => /빈자리/.test(f)).length
-  const twoTrusted = factions.filter((n) => A(n) >= 60).length >= 2
+  const twoTrusted = factions.filter((n) => A(n) >= 50).length >= 2
   const allCalm = factions.every((n) => S(n) < 70)
   const heat = save.heat || 0
 
@@ -507,13 +507,13 @@ export function eligibleEndings(save) {
   // Hidden trust-ending: everyone calm, broad trust, and you stayed off the grid.
   if (allCalm && twoTrusted && heat < 70) out.push('ENDING_NEXUS_TRUST')
   // Faction endings: only if you actually built an alliance.
-  if (maxA >= 40) {
+  if (maxA >= 20) {
     if (top === 'Ren') out.push('ENDING_REN_MONOPOLY')
     if (top === 'Kael') out.push('ENDING_KAEL_SILENCE')
     if (top === 'Echo') out.push('ENDING_ECHO_BREAKOUT')
   }
   // Lone-wolf ending: no strong ally.
-  if (maxA < 40) out.push('ENDING_SOLO_EXIT')
+  if (maxA < 20) out.push("ENDING_SOLO_EXIT")
   // Safety net — never leave the finale with nowhere to go.
   if (out.length === 0) out.push('ENDING_SOLO_EXIT')
   return [...new Set(out)]

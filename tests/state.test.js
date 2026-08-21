@@ -57,7 +57,8 @@ describe('applyResponse — 게이지', () => {
     const s = createNewGame() // Ren suspicion 10, affinity 10
     const n = applyResponse(s, beat({ suspicion_change: 5, affinity_change: 200 }), 'x')
     expect(n.relationships.Ren.suspicion).toBe(15)
-    expect(n.relationships.Ren.affinity).toBe(20) // 200은 +10로 클램프 → 10+10
+    // 200 → +10 클램프 → 세력 호감 가속(×1.6, 최대 +12) → 10 + 12 = 22
+    expect(n.relationships.Ren.affinity).toBe(22)
   })
   it('npc_name이 무효면 activeNpc로 폴백', () => {
     const s = createNewGame()
@@ -84,7 +85,7 @@ describe('applyResponse — heat(추적도) 클라이언트 baseline', () => {
   it('눈에 띄는 행동은 heat를 추가로 올린다', () => {
     const s = createNewGame() // heat 0
     const n = applyResponse(s, beat({ heat_change: 0 }), '해킹으로 침투')
-    expect(n.heat).toBe(2)
+    expect(n.heat).toBe(4) // 눈에 띄는 행동 baseline +4
   })
   it('잠행은 heat를 내리고 0에서 멈춘다', () => {
     const s = createNewGame()

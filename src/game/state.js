@@ -22,6 +22,10 @@ export const GATES = {
   AFFINITY_TRUST: 60, // >= : hidden truths / early chip #00 reveal
 }
 
+// 밸런스: 세력 NPC와 우호적 상호작용 시 매 턴 보장되는 최소 호감 상승(모델 신호가 약해도
+// 세력 정렬이 실제 보상으로 이어지게). 플레이테스트로 조정.
+export const AFFINITY_FLOOR = 6
+
 export function createNewGame() {
   return {
     version: SAVE_VERSION,
@@ -74,7 +78,17 @@ export function applyResponse(save, res, playerInput) {
   // Primary NPC gauge change (double-clamped defense).
   const rel = next.relationships[npc]
   rel.suspicion = clamp(rel.suspicion + clamp(res.suspicion_change ?? 0, -10, 10), 0, 100)
-  rel.affinity = clamp(rel.affinity + clamp(res.affinity_change ?? 0, -10, 10), 0, 100)
+  // 밸런스(P1): 세력 호감을 "바닥 보장"한다. 모델이 affinity_change를 거의 0으로만 줘서
+  // 게이지가 시작값에 머물고 세력 엔딩에 못 닿는 문제 → 세력 NPC와 우호적으로(비공격 +
+  // 모델이 호감을 깎지 않음) 상호작용하면 매 턴 최소 +AFFINITY_FLOOR를 보장한다.
+  const affRaw = clamp(res.affinity_change ?? 0, -10, 10)
+  const isFaction = npc !== 'NEXUS'
+  const aggressive = /위협|도발|공격|threat/i.test(playerInput || '')
+  let affApplied = affRaw > 0 ? Math.min(12, Math.round(affRaw * 1.6)) : affRaw
+  // 진짜 보장: 세력과 비공격 상호작용이면 모델이 호감을 깎아도(음수) 최소 +FLOOR 보장.
+  // (적대적 씬에서도 협조 의도가 관계를 쌓게 — 세력 정렬이 실제 보상으로 이어지도록)
+  if (isFaction && !aggressive) affApplied = Math.max(affApplied, AFFINITY_FLOOR)
+  rel.affinity = clamp(rel.affinity + affApplied, 0, 100)
 
   // Trade-off ripple: aggressive/deceptive beats nudge rivals.
   applyTradeoff(next, npc, res, playerInput)
@@ -82,8 +96,9 @@ export function applyResponse(save, res, playerInput) {
   // NEXUS trace: AI's read of how conspicuous this beat was, plus a client
   // baseline from the action type (defense-in-depth so heat moves even if the
   // model forgets). Conspicuous acts raise it; lying low lowers it.
+  // 밸런스(P2): 눈에 띄는 행동의 baseline을 +2→+4로 올려 추적/급습이 실제 위협이 되게.
   let heatDelta = clamp(res.heat_change ?? 0, -10, 10)
-  if (/위협|도발|해킹|hack|폭로|송출/i.test(playerInput || '')) heatDelta += 2
+  if (/위협|도발|해킹|hack|폭로|송출/i.test(playerInput || '')) heatDelta += 4
   else if (/은신|도주|stealth|flee|숨/i.test(playerInput || '')) heatDelta -= 2
   next.heat = clamp((next.heat || 0) + heatDelta, 0, 100)
 

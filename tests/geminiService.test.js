@@ -30,7 +30,8 @@ describe('normalize — enum 폴백', () => {
       save,
     )
     expect(NPCS).toContain(n.npc_name)
-    expect(n.npc_name).toBe(save.activeNpc)
+    // npc_name은 씬 무대 NPC로 강제됨 — PROLOGUE_RAIN_01의 STAGE_NPC는 NEXUS.
+    expect(n.npc_name).toBe('NEXUS')
     expect(EMOTIONS).toContain(n.npc_emotion)
     expect(TONES).toContain(n.background_tone)
     expect(n.background_tone).toBe(save.backgroundTone)

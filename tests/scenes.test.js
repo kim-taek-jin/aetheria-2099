@@ -32,8 +32,8 @@ describe('eligibleEndings', () => {
     expect(eligibleEndings(save)).toContain('ENDING_JAYNE_ORIGIN')
   })
 
-  it('강한 동맹이 없으면 홀로 걷는 길', () => {
-    const save = { relationships: rel({ Ren: { suspicion: 0, affinity: 20 } }) }
+  it('강한 동맹이 없으면 홀로 걷는 길(문턱 20 미만)', () => {
+    const save = { relationships: rel({ Ren: { suspicion: 0, affinity: 15 } }) }
     expect(eligibleEndings(save)).toContain('ENDING_SOLO_EXIT')
   })
 

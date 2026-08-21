@@ -95,7 +95,8 @@ async function playOne(strat, i) {
 }
 
 const report = []
-for (let i = 0; i < STRATEGIES.length; i++) {
+const LIM = Number(process.env.LIMIT || STRATEGIES.length);
+for (let i = 0; i < Math.min(LIM, STRATEGIES.length); i++) {
   report.push(await playOne(STRATEGIES[i], i))
 }
 fs.writeFileSync(OUT, JSON.stringify(report, null, 2))

@@ -403,19 +403,22 @@ function validBranch(proposed, save) {
   const cur = save.currentNode
   const scene = SCENES[cur]
   if (!scene) return okEnumStr(proposed, STORY_NODES, cur)
-  const allowed = new Set([cur, ...(scene.next || [])])
-  if (scene.endingChoiceNode) for (const e of eligibleEndings(save)) allowed.add(e)
+  // 엔딩 선택 노드: next가 6개 엔딩을 다 나열하므로, 자격을 갖춘 엔딩만 허용해
+  // 결정론적 게이트를 실제로 강제한다(P1 버그 수정). 그 외 노드는 next를 따른다.
+  const allowed = scene.endingChoiceNode
+    ? new Set([cur, ...eligibleEndings(save)])
+    : new Set([cur, ...(scene.next || [])])
   let branch = allowed.has(proposed) ? proposed : cur
-  // 페이싱 강제: 예산을 채웠는데 모델이 현재 노드에 머물면, 선형(단일 후속) 노드는
-  // 다음으로 강제 전진한다. 분기/엔딩 선택 노드는 플레이어 선택을 보존하려 제외.
   const budget = scene.beatBudget || 2
-  if (
-    branch === cur &&
-    !scene.endingChoiceNode &&
-    Array.isArray(scene.next) &&
-    scene.next.length === 1 &&
-    (save.turnsOnNode || 0) + 1 >= budget
-  ) {
+  const overBudget = (save.turnsOnNode || 0) + 1 >= budget
+  // 엔딩 선택 노드: 예산 초과인데 모델이 아직 엔딩을 안 고르면(현재 노드에 머묾)
+  // 자격 엔딩으로 강제 종료해 게임이 무한정 맴도는 걸 막는다(MAX_TURNS 버그 수정).
+  if (scene.endingChoiceNode && branch === cur && overBudget) {
+    const elig = eligibleEndings(save)
+    branch = elig[0] || 'ENDING_SOLO_EXIT'
+  }
+  // 페이싱 강제: 선형(단일 후속) 노드는 예산 초과 시 다음으로 전진.
+  else if (branch === cur && !scene.endingChoiceNode && Array.isArray(scene.next) && scene.next.length === 1 && overBudget) {
     branch = scene.next[0]
   }
   return branch
@@ -458,7 +461,10 @@ export function normalize(p, save) {
   })
   return {
     narration: stripHanja(typeof p.narration === 'string' ? p.narration.slice(0, 1200) : ''),
-    npc_name: okEnum(p.npc_name, NPCS, save.activeNpc),
+    // 무대 NPC 강제: 소형 모델이 씬의 화자를 NEXUS로 잘못 귀속하는 경향이 있어(→ 세력
+    // 호감이 아예 안 쌓임), 씬 바이블이 지정한 STAGE_NPC로 고정한다. 씬 정보가 없을 때만
+    // 모델 값 사용.
+    npc_name: SCENES[save.currentNode]?.npc || okEnum(p.npc_name, NPCS, save.activeNpc),
     npc_response: stripHanja(String(p.npc_response ?? '').slice(0, 2000)),
     npc_emotion: okEnum(p.npc_emotion, EMOTIONS, 'Neutral'),
     suspicion_change: clampInt(p.suspicion_change),
