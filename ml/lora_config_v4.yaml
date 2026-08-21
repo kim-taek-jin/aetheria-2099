@@ -1,0 +1,20 @@
+# 재학습 v2 — 전 층 LoRA + rank 16 (구 모델 88.6% 넘기기 목표)
+model: "qwen7b-4bit"
+train: true
+data: "mlx-data"
+fine_tune_type: lora
+num_layers: -1          # 전 층에 LoRA (핵심 개선)
+batch_size: 2
+iters: 750              # ~1.6에폭 (train 941, 멀티턴 x2)
+max_seq_length: 2048
+grad_checkpoint: true   # 메모리 안전 (다운 방지)
+learning_rate: 1.5e-5
+steps_per_report: 10
+steps_per_eval: 560
+val_batches: 6
+save_every: 80
+adapter_path: "adapters_v4"
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.0
