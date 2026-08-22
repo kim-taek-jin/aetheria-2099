@@ -67,7 +67,7 @@ JSON으로 생성하고, NPC별 관계 게이지·NEXUS 추적·증거 제시가
 src/
 ├─ App.jsx                     # 앱 셸 + 상태 오케스트레이션 + 하이브리드 배선
 ├─ game/
-│  ├─ lore.js / scenes.js      # 로어·씬 바이블(스토리 13 + 엔딩 6)·엔딩 게이트
+│  ├─ lore.js / scenes.js      # 로어·씬 바이블(스토리 18 + 엔딩 6)·엔딩 게이트
 │  ├─ state.js                 # 상태머신 + SaveGameV1 + 게이팅
 │  ├─ collection.js            # 결말 수집(재플레이 훅)
 │  └─ offline.js               # 키 없이 도는 스크립트 데모
