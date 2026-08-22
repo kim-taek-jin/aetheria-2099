@@ -28,7 +28,7 @@ import { generateBeat, emergencyBeat } from './services/geminiService.js'
 // 자체 파인튜닝 모델(로컬 Ollama). Gemini와 동일 시그니처/반환형이라 배선만 하면 됨.
 import { generateBeat as generateBeatLocal, isAvailable as ollamaIsAvailable } from './services/ollamaProvider.js'
 import { routeBeat } from './services/aiRouter.js'
-import { enableAudio, setEnabled, isEnabled, setAmbience, glitchBurst } from './audio/sound.js'
+import { enableAudio, setEnabled, isEnabled, setAmbience, glitchBurst, evidenceHit, evidenceMiss, endingSting } from './audio/sound.js'
 
 // Persistence abstraction — swap these two fns for a JSON save-file in
 // Electron/Tauri (Phase 2) without touching the rest of the app.
@@ -173,9 +173,12 @@ export default function App() {
       return
     }
     const wait = Math.min(6000, 1200 + (beat?.npc_response?.length || 0) * 18)
-    const t = setTimeout(() => setShowEnding(true), wait)
+    const t = setTimeout(() => {
+      setShowEnding(true)
+      if (audioOn) endingSting() // 결말의 여운 — 화음 패드
+    }, wait)
     return () => clearTimeout(t)
-  }, [save.endingReached, beat])
+  }, [save.endingReached, beat, audioOn])
 
   const glitch = useMemo(() => {
     // subtle base glitch that rises with the most-suspicious NPC
@@ -237,8 +240,9 @@ export default function App() {
     const data = res.ok ? res.data : emergencyBeat(save, res.code)
     if (!res.ok && audioOn) glitchBurst()
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
-    // Evidence feedback — the payoff / the sting.
-    if (data.evidence_result === 'hit' && audioOn) glitchBurst()
+    // Evidence feedback — the payoff / the sting (전용 SFX).
+    if (audioOn && data.evidence_result === 'hit') evidenceHit()
+    if (audioOn && data.evidence_result === 'miss') evidenceMiss()
 
     const nextSave = applyResponse(save, data, playerInput)
     // Scarcity: remember evidence already presented, so reuse falls flat.
