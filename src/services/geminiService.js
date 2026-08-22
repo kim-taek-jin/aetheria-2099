@@ -189,7 +189,7 @@ ${WORLD_LORE}`
 }
 
 // ---- 3-tier context payload (static lore is in systemInstruction only) ----
-export function buildContents(save, playerInput) {
+export function buildContents(save, playerInput, opts = {}) {
   const g = gateFlags(save)
   const stateBlock = {
     active_npc: save.activeNpc,
@@ -201,6 +201,7 @@ export function buildContents(save, playerInput) {
     recent_turns: save.recentTurns,
     collected_fragments: save.fragments || [], // evidence Jayne can present
     world_flags: Object.keys(save.flags || {}), // established facts — must stay consistent
+    player_canon: save.playerCanon || [], // 플레이어가 자유 행동으로 확립한 사실 — 반드시 반영
     nexus_trace: save.heat || 0, // 0-100 city-wide surveillance heat
   }
   const anchor = sceneAnchor(save.currentNode, save.turnsOnNode || 0)
@@ -215,13 +216,26 @@ export function buildContents(save, playerInput) {
   const noRepeat = lastLine
     ? `\nAVOID_REPEAT: 직전 대사("${String(lastLine).slice(0, 60)}…")의 문구·구조를 반복하지 말고, 새로운 표현으로 장면을 전개하라.\n`
     : ''
+  // 레일 위의 창발(플레이어 주도 서사): 플레이어의 행동이 세계에 지속적 흔적을 남기게 한다.
+  // 씬 뼈대(SCENE_ANCHOR)는 유지하되, 플레이어가 만든 사실·관계·물건·사건은 canon으로
+  // 받아들여 set_flags/new_fragments로 각인하고, world_flags의 기존 사실은 반드시 일관되게
+  // 이후 전개에 소환한다.
+  const agency =
+    `\nPLAYER_AGENCY: 플레이어의 행동은 canon이다. 플레이어가 새로운 사실·관계·물건·사건을` +
+    ` 끌어들이면 set_flags(소문자_스네이크)나 new_fragments로 영구히 각인하고, 그 결과가` +
+    ` 이후 대사·선택지에 실제로 반영되게 하라. GAME_STATE의 player_canon(플레이어가 확립한` +
+    ` 사실)과 world_flags는 반드시 일관되게 유지하고, 관련 씬에서 능동적으로 소환하라.\n` +
+    (opts.freeform
+      ? `PLAYER_INVENTED_ACTION: 이 행동은 플레이어가 제시된 선택지가 아니라 직접 지어낸 것이다.` +
+        ` SCENE_ANCHOR의 틀은 지키되, 이 즉흥 행동을 진지하게 받아 세계에 뚜렷한 흔적(set_flags)을 남겨라.\n`
+      : '')
   return [
     {
       role: 'user',
       parts: [
         {
           text:
-            `SCENE_ANCHOR:\n${anchor}\n${eligible}${noRepeat}\n` +
+            `SCENE_ANCHOR:\n${anchor}\n${eligible}${noRepeat}${agency}\n` +
             `GAME_STATE:\n${JSON.stringify(stateBlock)}\n\n` +
             `PLAYER_ACTION: ${playerInput}\n\n` +
             `Advance the story by one beat, staying inside the SCENE_ANCHOR, and return the JSON object.`,
@@ -234,12 +248,12 @@ export function buildContents(save, playerInput) {
 // ---- public API ----
 // Returns { ok:true, data } on success, or { ok:false, error, code } so the
 // UI can trigger the "NEXUS 회선 과부하" emergency-mode presentation.
-export async function generateBeat({ apiKey, save, playerInput, signal }) {
+export async function generateBeat({ apiKey, save, playerInput, signal, freeform }) {
   if (!apiKey) return { ok: false, code: 'NO_KEY', error: 'API key missing' }
 
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction() }] },
-    contents: buildContents(save, playerInput),
+    contents: buildContents(save, playerInput, { freeform }),
     generationConfig: {
       temperature: 0.9,
       // Flash models may "think" (reasoning tokens count toward this budget),

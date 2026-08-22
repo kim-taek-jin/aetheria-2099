@@ -115,6 +115,7 @@ export default function App() {
   const [ollamaOn, setOllamaOn] = useState(false) // 로컬 자체모델 사용 가능 여부
   const [fellBack, setFellBack] = useState(false) // 이번 턴 클라우드→로컬 폴백 여부
   const [delta, setDelta] = useState(null) // 이번 턴 상태 변화(선택의 무게 연출)
+  const [canonMark, setCanonMark] = useState(null) // 플레이어 행동이 세계에 남긴 새 흔적
   // "내 모델 전용" 모드 — 키가 있어도 클라우드를 안 쓰고 로컬만 사용(오프라인·프라이버시).
   const [forceLocal, setForceLocal] = useState(() => {
     try {
@@ -228,6 +229,7 @@ export default function App() {
       gemini: generateBeat,
       local: generateBeatLocal,
       onPartial: setStreaming,
+      freeform: !!meta.freeform, // 자유 입력 행동은 canon으로 각인(레일 위의 창발)
     })
     setFellBack(via === 'local-fallback') // 이 턴에 로컬로 전환됐는지 표시
     setStreaming(null) // 최종 비트로 대체
@@ -243,10 +245,24 @@ export default function App() {
     if (meta.presentedFragment && !nextSave.usedFragments.includes(meta.presentedFragment)) {
       nextSave.usedFragments = [...nextSave.usedFragments, meta.presentedFragment]
     }
+    // 레일 위의 창발: 자유 입력 행동을 canon으로 기록해 이후 프롬프트에 주입(모델이
+    // set_flags를 안 내도 플레이어가 만든 것이 지속되게). 최근 6개만 유지.
+    if (meta.freeform && playerInput?.trim()) {
+      const entry = playerInput.trim().replace(/^\[[^\]]*\]\s*/, '').slice(0, 90)
+      nextSave.playerCanon = [...(nextSave.playerCanon || []), entry].slice(-6)
+    }
     nextSave.updatedAt = nowIso()
     setSave(nextSave)
     setBeat(data)
     setDelta(computeDelta(save, nextSave, data)) // 선택의 결과를 눈에 보이게
+    // 이 턴에 남긴 새 흔적(모델 flag/조각 또는 플레이어 canon)을 표시.
+    const newFlags = Object.keys(nextSave.flags || {}).filter((f) => !save.flags?.[f])
+    const newFrags = (nextSave.fragments || []).filter((f) => !(save.fragments || []).includes(f))
+    const newCanon = (nextSave.playerCanon || []).filter((c) => !(save.playerCanon || []).includes(c))
+    if (newFlags.length || newFrags.length || newCanon.length) {
+      setCanonMark({ flags: newFlags, frags: newFrags, canon: newCanon })
+      setTimeout(() => setCanonMark(null), 4200)
+    }
     setLoading(false)
 
     // BYOK key rejected -> reopen modal so the player can fix it.
@@ -417,6 +433,19 @@ export default function App() {
         </div>
       )}
 
+      {/* 레일 위의 창발 — 플레이어 행동이 세계에 남긴 새 흔적(canon) 알림 */}
+      {canonMark && (
+        <div className="intro-up flex items-center justify-center gap-2 rounded border border-neon-magenta/40 bg-neon-magenta/10 py-1 text-[11px] tracking-widest text-neon-magenta">
+          ✎ 세계에 흔적을 남겼다 —{' '}
+          {canonMark.frags?.length
+            ? canonMark.frags[0].replace(/^기[록억] 조각[·:]?\s*/, '').slice(0, 42)
+            : canonMark.canon?.length
+            ? canonMark.canon[0].slice(0, 42)
+            : canonMark.flags.slice(0, 2).join(' · ')}
+          {(canonMark.frags?.length || 0) + (canonMark.flags?.length || 0) + (canonMark.canon?.length || 0) > 1 ? ' …' : ''}
+        </div>
+      )}
+
       {/* 증거 제시 결과 — 코어 메커닉의 페이오프/스팅을 화면 전체로 각인 */}
       {delta && (delta.evidence === 'hit' || delta.evidence === 'miss') && (
         <div
@@ -448,7 +477,7 @@ export default function App() {
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
         onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text))}
-        onFreeText={(t) => (offlineMode ? setShowKeyModal(true) : advance(t))}
+        onFreeText={(t) => (offlineMode ? setShowKeyModal(true) : advance(t, { freeform: true }))}
         onPresentEvidence={() => {
           if (offlineMode) {
             // Real evidence judging needs the AI. Nudge to add a key.

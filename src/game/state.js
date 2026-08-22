@@ -57,6 +57,9 @@ export function createNewGame() {
     // World-state flags: discrete story facts the AI has established. Drives
     // continuity + consequence (the narrative engine's memory of "what happened").
     flags: {},
+    // 레일 위의 창발: 플레이어가 자유 입력으로 확립한 사실(최근 것들). 소형 모델이
+    // set_flags를 잘 안 내므로 클라이언트가 기록해 이후 프롬프트에 canon으로 주입한다.
+    playerCanon: [],
     endingReached: null,
     failed: null, // { npc, reason } when a run collapses (arrest / route lost)
   }

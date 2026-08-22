@@ -36,8 +36,8 @@ function extractPartialString(buf, key) {
 }
 
 // 한 번의 생성 요청. stream이면 onPartial로 부분 텍스트를 흘려보낸다.
-async function runOnce({ save, playerInput, signal, onPartial, url, model, temperature }) {
-  const user = buildContents(save, playerInput)[0].parts[0].text
+async function runOnce({ save, playerInput, signal, onPartial, freeform, url, model, temperature }) {
+  const user = buildContents(save, playerInput, { freeform })[0].parts[0].text
   const stream = typeof onPartial === 'function'
   const body = {
     model,
@@ -118,15 +118,15 @@ async function runOnce({ save, playerInput, signal, onPartial, url, model, tempe
 // generateBeat와 호환. apiKey 불필요(로컬).
 // onPartial(선택): 스트리밍 중 부분 텍스트를 흘려보내 대기 체감을 줄인다.
 // 자가 치유: 첫 결과가 퇴행(반복·에코·너무 짧음)이면 온도를 올려 1회만 재생성.
-export async function generateBeat({ save, playerInput, signal, onPartial, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+export async function generateBeat({ save, playerInput, signal, onPartial, freeform, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
   const prevLine = [...(save.recentTurns || [])].reverse().find((t) => t?.line)?.line
 
-  const first = await runOnce({ save, playerInput, signal, onPartial, url, model, temperature: 0.65 })
+  const first = await runOnce({ save, playerInput, signal, onPartial, freeform, url, model, temperature: 0.65 })
   if (!first.ok) return first
   if (!isLowQuality(first.data.npc_response, prevLine)) return first
 
   // 퇴행 감지 → 온도를 올려 다양성을 주고 1회 재생성(스트리밍 없이). 더 나으면 채택.
-  const retry = await runOnce({ save, playerInput, signal, url, model, temperature: 0.85 })
+  const retry = await runOnce({ save, playerInput, signal, freeform, url, model, temperature: 0.85 })
   if (retry.ok && !isLowQuality(retry.data.npc_response, prevLine)) return retry
   return first // 재생성도 신통찮으면 최선의 첫 결과 유지
 }
