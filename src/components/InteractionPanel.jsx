@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch } from 'lucide-react'
 
+// 각 톤의 아이콘·색 + "판돈" 태그(위험/보상을 한눈에 — 선택에 무게를 준다).
 const TONE_STYLE = {
   // dialogue
-  Honest: { icon: MessageSquare, cls: 'border-neon-green/40 text-neon-green hover:bg-neon-green/10' },
-  Deceptive: { icon: Ghost, cls: 'border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10' },
-  Aggressive: { icon: Flame, cls: 'border-neon-red/40 text-neon-red hover:bg-neon-red/10' },
+  Honest: { icon: MessageSquare, cls: 'border-neon-green/40 text-neon-green hover:bg-neon-green/10', stake: '정면', risk: 0 },
+  Deceptive: { icon: Ghost, cls: 'border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10', stake: '기만', risk: 0 },
+  Aggressive: { icon: Flame, cls: 'border-neon-red/40 text-neon-red hover:bg-neon-red/10', stake: '추적↑↑', risk: 2 },
   // action
-  Investigate: { icon: Search, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10' },
-  Hack: { icon: Terminal, cls: 'border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/10' },
-  Stealth: { icon: EyeOff, cls: 'border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10' },
-  Flee: { icon: Footprints, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10' },
+  Investigate: { icon: Search, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: '단서', risk: 0 },
+  Hack: { icon: Terminal, cls: 'border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/10', stake: '추적↑↑', risk: 2 },
+  Stealth: { icon: EyeOff, cls: 'border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10', stake: '추적↓', risk: -1 },
+  Flee: { icon: Footprints, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: '이탈', risk: -1 },
 }
 
 export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
@@ -36,8 +37,17 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
               onClick={() => onChoose(c)}
               className={`neon-btn rounded border px-3 py-2 text-left text-xs leading-snug ${s.cls} disabled:cursor-not-allowed disabled:opacity-40`}
             >
-              <span className="mb-1 flex items-center gap-1 opacity-70">
-                <Icon size={11} /> {c.tone}
+              <span className="mb-1 flex items-center gap-1">
+                <Icon size={11} className="opacity-70" />
+                <span className="opacity-70">{c.tone}</span>
+                {/* 판돈 태그: 위험은 붉게, 잠행/이탈은 시안으로 — 선택의 무게를 노출 */}
+                <span
+                  className={`ml-auto rounded px-1 text-[9px] font-bold tracking-wider ${
+                    s.risk > 0 ? 'bg-neon-red/15 text-neon-red' : s.risk < 0 ? 'bg-cyan-400/15 text-cyan-300' : 'bg-white/5 text-cyan-300/50'
+                  }`}
+                >
+                  {s.stake}
+                </span>
               </span>
               {c.text}
             </button>

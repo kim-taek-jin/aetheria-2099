@@ -70,6 +70,8 @@ export const FAIL_SUSPICION = 100
 // NEXUS trace at/above this = drone raid (a second, city-wide failure path).
 export const HEAT_MAX = 100
 export const HEAT_WARN = 70
+// 매 턴 자동으로 오르는 추적량(압박 시계). 잠행(-5)으로 되감을 수 있어 위험/보상 성립.
+export const HEAT_TICK = 3
 
 export const MAX_RECENT_TURNS = 6
 
@@ -99,10 +101,12 @@ export function applyResponse(save, res, playerInput) {
   // NEXUS trace: AI's read of how conspicuous this beat was, plus a client
   // baseline from the action type (defense-in-depth so heat moves even if the
   // model forgets). Conspicuous acts raise it; lying low lowers it.
-  // 밸런스(P2): 눈에 띄는 행동의 baseline을 +2→+4로 올려 추적/급습이 실제 위협이 되게.
-  let heatDelta = clamp(res.heat_change ?? 0, -10, 10)
+  // 긴장(압박 시계): NEXUS 추적은 매 턴 자동으로 +HEAT_TICK 오른다 — 도시가 늘 감시
+  // 중이므로 가만히 있어도 조여온다. 눈에 띄는 행동은 크게 뛰고, 잠행은 되돌린다.
+  // 100 = 드론 급습(게임오버). 이게 "매 턴이 risk"인 긴장을 만든다.
+  let heatDelta = clamp(res.heat_change ?? 0, -10, 10) + HEAT_TICK
   if (/위협|도발|해킹|hack|폭로|송출/i.test(playerInput || '')) heatDelta += 4
-  else if (/은신|도주|stealth|flee|숨/i.test(playerInput || '')) heatDelta -= 2
+  else if (/은신|도주|stealth|flee|숨/i.test(playerInput || '')) heatDelta -= 5 // 잠행은 시계를 되감음
   next.heat = clamp((next.heat || 0) + heatDelta, 0, 100)
 
   next.activeNpc = npc

@@ -81,16 +81,22 @@ describe('applyResponse — trade-off 파급', () => {
   })
 })
 
-describe('applyResponse — heat(추적도) 클라이언트 baseline', () => {
-  it('눈에 띄는 행동은 heat를 추가로 올린다', () => {
+describe('applyResponse — heat(추적 압박 시계)', () => {
+  it('평범한 턴도 추적이 자동으로 오른다(압박 시계)', () => {
+    const s = createNewGame() // heat 0
+    const n = applyResponse(s, beat({ heat_change: 0 }), '상황을 살핀다')
+    expect(n.heat).toBe(3) // HEAT_TICK
+  })
+  it('눈에 띄는 행동은 크게 오른다(tick +3, 눈에띄는 +4)', () => {
     const s = createNewGame() // heat 0
     const n = applyResponse(s, beat({ heat_change: 0 }), '해킹으로 침투')
-    expect(n.heat).toBe(4) // 눈에 띄는 행동 baseline +4
+    expect(n.heat).toBe(7)
   })
-  it('잠행은 heat를 내리고 0에서 멈춘다', () => {
+  it('잠행은 시계를 되감는다(tick +3, 잠행 -5 → 순 -2)', () => {
     const s = createNewGame()
+    s.heat = 20
     const n = applyResponse(s, beat({ heat_change: 0 }), '은신한다')
-    expect(n.heat).toBe(0)
+    expect(n.heat).toBe(18)
   })
 })
 
