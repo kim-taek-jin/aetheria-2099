@@ -39,6 +39,27 @@ export function isEnabled() {
   return enabled
 }
 
+// music.js가 같은 컨텍스트/마스터를 공유하도록 노출 — 볼륨과 헤드룸이 한 곳에서 관리된다.
+export function getAudioContext() {
+  return ac()
+}
+export function getMasterGain() {
+  ac()
+  return master
+}
+
+// 작곡된 BGM이 재생 중이면 절차적 드론을 낮춘다(0=무음). BGM이 없으면 1로 유지돼
+// 지금까지의 동작이 그대로 보존된다 — 에셋은 선택적 업그레이드.
+let droneDuck = 1
+export function setDroneDuck(v) {
+  droneDuck = Math.max(0, Math.min(1, v))
+  const c = ctx
+  if (drone && c) {
+    const target = Math.max(0.0001, (drone.baseGain || 0.05) * droneDuck)
+    drone.gain.gain.exponentialRampToValueAtTime(target, c.currentTime + 1.2)
+  }
+}
+
 // Short blip while text types out.
 export function blip() {
   const c = ac()
@@ -77,8 +98,9 @@ export function setAmbience(key) {
   filter.type = 'lowpass'
   filter.frequency.value = cfg.cutoff
   const g = c.createGain()
+  const lvl = Math.max(0.0001, cfg.gain * droneDuck) // BGM 재생 중이면 낮게 깔린다
   g.gain.setValueAtTime(0.0001, t)
-  g.gain.exponentialRampToValueAtTime(cfg.gain, t + 1.1) // 페이드인
+  g.gain.exponentialRampToValueAtTime(lvl, t + 1.1) // 페이드인
   g.connect(filter).connect(master)
 
   const o1 = c.createOscillator()
@@ -95,13 +117,13 @@ export function setAmbience(key) {
   const lfo = c.createOscillator()
   const lfoGain = c.createGain()
   lfo.frequency.value = 0.12
-  lfoGain.gain.value = cfg.gain * 0.35
+  lfoGain.gain.value = lvl * 0.35
   lfo.connect(lfoGain).connect(g.gain)
 
   o1.start(t)
   o2.start(t)
   lfo.start(t)
-  drone = { oscs: [o1, o2], gain: g, lfo, filter }
+  drone = { oscs: [o1, o2], gain: g, lfo, filter, baseGain: cfg.gain }
 }
 
 // 증거 적중 — 밝게 상승하는 확신의 차임(2음 아르페지오).

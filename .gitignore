@@ -27,3 +27,6 @@ trailer-assets/
 # 플레이테스트/트레일러 산출물
 playtest-report.json
 trailer-assets/
+
+# BGM 에셋(사용자가 Suno 등으로 생성) — 리포에 커밋하지 않음
+public/music/*.mp3

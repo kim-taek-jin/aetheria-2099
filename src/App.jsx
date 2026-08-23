@@ -29,6 +29,7 @@ import { generateBeat, emergencyBeat } from './services/geminiService.js'
 import { generateBeat as generateBeatLocal, isAvailable as ollamaIsAvailable } from './services/ollamaProvider.js'
 import { routeBeat } from './services/aiRouter.js'
 import { enableAudio, setEnabled, isEnabled, setAmbience, glitchBurst, evidenceHit, evidenceMiss, endingSting } from './audio/sound.js'
+import { setMusicTone, stopMusic } from './audio/music.js'
 
 // Persistence abstraction — swap these two fns for a JSON save-file in
 // Electron/Tauri (Phase 2) without touching the rest of the app.
@@ -160,9 +161,13 @@ export default function App() {
     if (!loading) storage.writeBeat(beat)
   }, [beat, loading])
 
-  // Bind ambience to current background tone.
+  // Bind ambience + BGM to current background tone. (음악 트랙이 없으면
+  // setMusicTone은 조용히 아무것도 하지 않고 절차적 드론만 남는다.)
   useEffect(() => {
-    if (audioOn) setAmbience(beat?.background_tone || 'Neutral')
+    if (audioOn) {
+      setAmbience(beat?.background_tone || 'Neutral')
+      setMusicTone(beat?.background_tone || 'Neutral')
+    }
   }, [beat?.background_tone, audioOn])
 
   // When an ending is reached, let the final line type out, then reveal
@@ -330,9 +335,11 @@ export default function App() {
       setEnabled(true)
       setAudioOn(true)
       setAmbience(beat?.background_tone || 'Neutral')
+      setMusicTone(beat?.background_tone || 'Neutral')
     } else {
       setEnabled(false)
       setAudioOn(false)
+      stopMusic(0.6)
     }
   }
 
