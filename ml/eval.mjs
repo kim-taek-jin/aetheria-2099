@@ -25,6 +25,7 @@ const EVAL_FILE = process.env.EVAL_FILE || 'ml/eval.jsonl'
 const LIMIT = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'aetheria'
+const EVAL_TEMP = process.env.EVAL_TEMP ? Number(process.env.EVAL_TEMP) : 0.9 // 기본은 스트레스 테스트(0.9); 게임 실사용은 0.65
 const GEMINI_KEY = process.env.GEMINI_API_KEY
 
 if (!fs.existsSync(EVAL_FILE)) {
@@ -85,7 +86,7 @@ async function genOllama(messages) {
   const r = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: OLLAMA_MODEL, messages, stream: false, options: { temperature: 0.9, num_predict: 1024 } }),
+    body: JSON.stringify({ model: OLLAMA_MODEL, messages, stream: false, options: { temperature: EVAL_TEMP, num_predict: 1024 } }),
   })
   if (!r.ok) throw new Error(`Ollama HTTP ${r.status}`)
   const j = await r.json()

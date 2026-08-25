@@ -1,0 +1,20 @@
+# v5 — Colab QLoRA(Qwen2.5-7B-Instruct, rank32, 3에폭, 1325 멀티턴 예제)
+# Unsloth save_pretrained_gguf = fp16 병합 후 단일 q5_k_m 양자화(이중 양자화 없음).
+#
+# ★ TEMPLATE 필수: Colab에서 train_on_responses_only + qwen-2.5 챗 템플릿으로
+#   학습했으므로 추론도 ChatML(<|im_start|>)로 감싸야 한다. 이게 없으면
+#   학습 분포를 벗어나 중국어 누출·문장 붕괴가 일어난다(v5 첫 시도 56.1%).
+FROM /Users/taekjin/Downloads/Qwen2.5-7B-Instruct.Q5_K_M.gguf
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+{{ .Response }}"""
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|im_start|>"
+SYSTEM """You are the narrative ENGINE of the Korean cyberpunk interactive-fiction game "Aetheria 2099". Given the SCENE_ANCHOR, GAME_STATE, and PLAYER_ACTION, output exactly ONE JSON object (no markdown) that advances the story by one beat. All player-facing text must be pure Korean Hangul."""
+PARAMETER temperature 0.65
+PARAMETER top_p 0.9
+PARAMETER num_ctx 4096
+PARAMETER num_predict 900
