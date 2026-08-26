@@ -12,7 +12,7 @@
 //  기본 엔드포인트: http://localhost:11434 (Ollama 기본).
 // ============================================================
 
-import { SHORT_SYSTEM, RESPONSE_SCHEMA, buildContents, safeParse, normalize, isLowQuality } from './geminiService.js'
+import { SHORT_SYSTEM, RESPONSE_SCHEMA, buildContents, safeParse, normalize, isLowQuality, hasGarble } from './geminiService.js'
 
 export const OLLAMA_URL = 'http://localhost:11434'
 export const OLLAMA_MODEL = 'aetheria' // `ollama create aetheria -f Modelfile` 로 등록한 이름
@@ -117,18 +117,37 @@ async function runOnce({ save, playerInput, signal, onPartial, freeform, url, mo
 
 // generateBeat와 호환. apiKey 불필요(로컬).
 // onPartial(선택): 스트리밍 중 부분 텍스트를 흘려보내 대기 체감을 줄인다.
-// 자가 치유: 첫 결과가 퇴행(반복·에코·너무 짧음)이면 온도를 올려 1회만 재생성.
+//
+// 자가 치유(2종): 결함의 종류에 따라 재생성 온도를 반대로 준다.
+//  · 퇴행(반복·에코·너무 짧음) → 온도를 **올려** 갇힌 패턴에서 빠져나온다.
+//  · 깨진 토큰(라틴 덩어리·한자 잔존) → 온도를 **내려** 샘플링 꼬리 노이즈를 줄인다.
+// 나레이션도 함께 본다 — 깨짐은 대사보다 나레이션에서 더 자주 난다.
+function defectOf(data, prevLine) {
+  if (hasGarble(data.npc_response) || hasGarble(data.narration)) return 'GARBLE'
+  if (isLowQuality(data.npc_response, prevLine)) return 'DEGEN'
+  return null
+}
+
 export async function generateBeat({ save, playerInput, signal, onPartial, freeform, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
   const prevLine = [...(save.recentTurns || [])].reverse().find((t) => t?.line)?.line
 
   const first = await runOnce({ save, playerInput, signal, onPartial, freeform, url, model, temperature: 0.65 })
   if (!first.ok) return first
-  if (!isLowQuality(first.data.npc_response, prevLine)) return first
+  const defect = defectOf(first.data, prevLine)
+  if (!defect) return first
 
-  // 퇴행 감지 → 온도를 올려 다양성을 주고 1회 재생성(스트리밍 없이). 더 나으면 채택.
-  const retry = await runOnce({ save, playerInput, signal, freeform, url, model, temperature: 0.85 })
-  if (retry.ok && !isLowQuality(retry.data.npc_response, prevLine)) return retry
-  return first // 재생성도 신통찮으면 최선의 첫 결과 유지
+  // 1회만 재생성(스트리밍 없이 — 화면에 깨진 글자가 흘러가지 않게).
+  const retry = await runOnce({
+    save, playerInput, signal, freeform, url, model,
+    temperature: defect === 'GARBLE' ? 0.45 : 0.85,
+  })
+  if (retry.ok && !defectOf(retry.data, prevLine)) return retry
+
+  // 재생성도 결함이면: 깨짐은 둘 중 덜 깨진 쪽을 고른다(반복은 첫 결과 유지).
+  if (defect === 'GARBLE' && retry.ok && !hasGarble(retry.data.npc_response) && !hasGarble(retry.data.narration)) {
+    return retry
+  }
+  return first
 }
 
 // 로컬 Ollama가 살아있고 모델이 있는지 확인(프로바이더 선택에 사용).

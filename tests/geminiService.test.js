@@ -1,7 +1,7 @@
 // geminiService.js — AI 출력 방어선(safeParse/normalize) 테스트.
 // 모델이 무엇을 뱉든 게임이 쓰는 안전한 형태로 강제되는지 검증.
 import { describe, it, expect } from 'vitest'
-import { safeParse, normalize, isLowQuality } from '../src/services/geminiService.js'
+import { safeParse, normalize, isLowQuality, hasGarble } from '../src/services/geminiService.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
 
 const save = {
@@ -145,5 +145,25 @@ describe('normalize — set_flags / evidence_result', () => {
     expect(normalize({ evidence_result: 'hit' }, save).evidence_result).toBe('hit')
     expect(normalize({ evidence_result: 'weird' }, save).evidence_result).toBe('none')
     expect(normalize({}, save).evidence_result).toBe('none')
+  })
+})
+
+describe('hasGarble — 깨진 토큰 감지(스키마로는 못 잡는 층)', () => {
+  it('한글 문장에 낀 라틴 덩어리를 잡는다', () => {
+    expect(hasGarble('카엘이 단말을 쥐어 indeb시는 손을 뒤로')).toBe(true)
+    expect(hasGarble('달CHEDKAA 정점에 달한다')).toBe(true)
+  })
+  it('한자·중국어 문장부호 잔존을 잡는다', () => {
+    expect(hasGarble('제인이 기록을再度举到')).toBe(true)
+  })
+  it('세계관 고유명사와 칩 코드는 오탐하지 않는다', () => {
+    expect(hasGarble('NEXUS가 회선을 두드린다')).toBe(false)
+    expect(hasGarble('에코가 칩#00-X를 쥐어준다')).toBe(false)
+    expect(hasGarble('평범한 한국어 문장이다.')).toBe(false)
+  })
+  it('빈 값에 안전하다', () => {
+    expect(hasGarble('')).toBe(false)
+    expect(hasGarble(null)).toBe(false)
+    expect(hasGarble(undefined)).toBe(false)
   })
 })

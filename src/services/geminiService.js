@@ -410,6 +410,23 @@ export function isLowQuality(npcResponse, prevLine) {
   return false
 }
 
+// 한글 산문에 끼어든 "깨진 토큰"을 감지한다 — 소형 모델이 디코딩 중
+// 엉뚱한 토큰을 흘리는 현상(예: "단말을 쥐어 indeb시는 손").
+// 구조상 완벽히 유효한 문자열이라 스키마 검증으로는 잡을 수 없어 따로 본다.
+//
+// 오탐 방지: NEXUS 같은 세계관 고유명사와 칩 코드(#00-X)의 한 글자는
+// 정상이므로, 3자 이상 라틴 덩어리 중 화이트리스트에 없는 것만 잡는다.
+const GARBLE_OK = /^(NEXUS|AETHERIA|AI|ID|OK|SOS)$/i
+export function hasGarble(s) {
+  const t = String(s || '')
+  for (const run of t.match(/[A-Za-z]{3,}/g) || []) {
+    if (!GARBLE_OK.test(run)) return true
+  }
+  // 정규화 전 경로를 위한 보험: 한자·중국어 문장부호 잔존.
+  if (/[㐀-䶿一-鿿！-｠]/.test(t)) return true
+  return false
+}
+
 // story_branch를 "현재 노드의 허용 후속"으로만 제한한다(불법 점프 방어).
 // 소형 모델이 Act2 → ENDING처럼 몇 단계를 건너뛰는 걸 막는다. 엔딩 선택 노드에선
 // 자격을 갖춘 엔딩만 허용. 그 외엔 현재 노드에 머문다.
