@@ -13,7 +13,7 @@ import EndingScreen from './components/EndingScreen.jsx'
 import FailureScreen from './components/FailureScreen.jsx'
 
 import { OPENING } from './game/lore.js'
-import { SCENES, remainingEstimate } from './game/scenes.js'
+import { SCENES, remainingEstimate, judgeEvidence, weakPointOf } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import {
   createNewGame,
@@ -238,6 +238,7 @@ export default function App() {
       local: generateBeatLocal,
       onPartial: setStreaming,
       freeform: !!meta.freeform, // 자유 입력 행동은 canon으로 각인(레일 위의 창발)
+      evidenceVerdict: meta.evidenceVerdict, // 증거 판정은 클라이언트가 확정(모델이 못 뒤집음)
     })
     setFellBack(via === 'local-fallback') // 이 턴에 로컬로 전환됐는지 표시
     setStreaming(null) // 최종 비트로 대체
@@ -303,7 +304,9 @@ export default function App() {
   function presentEvidence(f) {
     const used = (save.usedFragments || []).includes(f)
     const input = used ? `증거 재제시(이미 보여준 것): "${f}"` : `증거 제시: "${f}"`
-    advance(input, { presentedFragment: f })
+    // 정답은 씬이 쥐고 있다 — 모델에 맡기면 판정이 흔들려 추리가 성립하지 않는다.
+    const verdict = judgeEvidence(save.currentNode, f, used)
+    advance(input, { presentedFragment: f, evidenceVerdict: verdict || undefined })
   }
 
   function handleSaveKey(k) {
@@ -561,6 +564,7 @@ export default function App() {
         fragments={save.fragments}
         open={showCodex}
         selectMode={evidenceMode}
+        weakPoint={weakPointOf(save.currentNode)}
         onSelect={(f) => {
           setShowCodex(false)
           setEvidenceMode(false)

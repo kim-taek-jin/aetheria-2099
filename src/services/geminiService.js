@@ -132,8 +132,10 @@ EVIDENCE (player may present a collected memory fragment — a core mechanic):
     new_fragments entry. This is the payoff — write it as a dramatic reversal.
   - "miss" → the fragment is irrelevant, or clumsy here. It BACKFIRES: the NPC
     grows wary, suspicion_change should be positive (+4..+10). Cost, not free.
-  - If the anchor provides KEY_EVIDENCE, use it as the authority on what counts
-    as a hit vs miss at THIS node.
+  - If EVIDENCE_VERDICT is present, it is AUTHORITATIVE — never contradict it.
+    Do not decide hit vs miss yourself; dramatise the verdict you are given.
+  - Otherwise, if the anchor provides KEY_EVIDENCE, use it as the authority on
+    what counts as a hit vs miss at THIS node.
   - If the input is 증거 재제시(이미 보여준 것): the NPC is unimpressed she is
     repeating herself — dismissive, mild suspicion. Use "miss".
 - On any non-evidence turn, set "evidence_result":"none".
@@ -205,6 +207,14 @@ export function buildContents(save, playerInput, opts = {}) {
     nexus_trace: save.heat || 0, // 0-100 city-wide surveillance heat
   }
   const anchor = sceneAnchor(save.currentNode, save.turnsOnNode || 0)
+  // 증거 판정은 클라이언트가 확정한다(씬의 evidenceHits). 모델에는 "판정하라"가
+  // 아니라 "이 판정대로 극화하라"고 통보한다 — 소형 모델의 판정 흔들림 제거.
+  const verdict = opts.evidenceVerdict
+    ? `\nEVIDENCE_VERDICT (AUTHORITATIVE — do NOT re-judge): "${opts.evidenceVerdict}".\n` +
+      (opts.evidenceVerdict === 'hit'
+        ? 'Jayne named this NPC\'s exact weak point. Write it as a genuine crack in their armor — the reversal they cannot argue with.\n'
+        : 'The fragment does NOT touch this NPC\'s weak point. They see it as noise or manipulation. It BACKFIRES: suspicion_change must be positive (+4..+10).\n')
+    : ''
   // At the finale, tell the model exactly which endings the player's systems
   // have unlocked — it must pick story_branch from this list only.
   const eligible = SCENES[save.currentNode]?.endingChoiceNode
@@ -235,7 +245,7 @@ export function buildContents(save, playerInput, opts = {}) {
       parts: [
         {
           text:
-            `SCENE_ANCHOR:\n${anchor}\n${eligible}${noRepeat}${agency}\n` +
+            `SCENE_ANCHOR:\n${anchor}\n${eligible}${verdict}${noRepeat}${agency}\n` +
             `GAME_STATE:\n${JSON.stringify(stateBlock)}\n\n` +
             `PLAYER_ACTION: ${playerInput}\n\n` +
             `Advance the story by one beat, staying inside the SCENE_ANCHOR, and return the JSON object.`,
@@ -248,12 +258,12 @@ export function buildContents(save, playerInput, opts = {}) {
 // ---- public API ----
 // Returns { ok:true, data } on success, or { ok:false, error, code } so the
 // UI can trigger the "NEXUS 회선 과부하" emergency-mode presentation.
-export async function generateBeat({ apiKey, save, playerInput, signal, freeform }) {
+export async function generateBeat({ apiKey, save, playerInput, signal, freeform, evidenceVerdict }) {
   if (!apiKey) return { ok: false, code: 'NO_KEY', error: 'API key missing' }
 
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction() }] },
-    contents: buildContents(save, playerInput, { freeform }),
+    contents: buildContents(save, playerInput, { freeform, evidenceVerdict }),
     generationConfig: {
       temperature: 0.9,
       // Flash models may "think" (reasoning tokens count toward this budget),
@@ -290,7 +300,7 @@ export async function generateBeat({ apiKey, save, playerInput, signal, freeform
   const parsed = safeParse(raw)
   if (!parsed) return { ok: false, code: 'PARSE', error: 'model returned non-JSON' }
 
-  return { ok: true, data: normalize(parsed, save) }
+  return { ok: true, data: normalize(parsed, save, evidenceVerdict) }
 }
 
 // ---- retry with exponential backoff on 429/5xx ----
@@ -478,7 +488,7 @@ function labelChoice(text, tone) {
 }
 
 // Coerce/clamp anything the schema somehow let through (2nd defense line).
-export function normalize(p, save) {
+export function normalize(p, save, forcedVerdict) {
   const okEnum = (v, arr, fb) => (arr.includes(v) ? v : fb)
   const clampInt = (n) => Math.max(-10, Math.min(10, Math.round(Number(n) || 0)))
   let choices = Array.isArray(p.generated_choices) ? p.generated_choices.slice(0, 3) : []
@@ -508,7 +518,8 @@ export function normalize(p, save) {
     set_flags: Array.isArray(p.set_flags)
       ? p.set_flags.filter((x) => typeof x === 'string' && /^[a-z0-9_]+$/i.test(x)).slice(0, 6)
       : [],
-    evidence_result: ['hit', 'miss'].includes(p.evidence_result) ? p.evidence_result : 'none',
+    // 클라이언트 판정이 있으면 그것이 최종(모델이 뒤집지 못한다).
+    evidence_result: forcedVerdict || (['hit', 'miss'].includes(p.evidence_result) ? p.evidence_result : 'none'),
     generated_choices: choices,
   }
 }

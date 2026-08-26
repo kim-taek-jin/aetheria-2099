@@ -1,8 +1,8 @@
-import { BookLock, X } from 'lucide-react'
+import { BookLock, Crosshair, X } from 'lucide-react'
 
 // Memory Fragment codex. Doubles as Phase 2 gallery / achievement data,
 // serialized inside the same SaveGameV1 object.
-export default function CodexDrawer({ fragments, open, onClose, selectMode = false, onSelect }) {
+export default function CodexDrawer({ fragments, open, onClose, selectMode = false, onSelect, weakPoint }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[70] flex justify-end bg-black/60" onClick={onClose}>
@@ -21,6 +21,18 @@ export default function CodexDrawer({ fragments, open, onClose, selectMode = fal
 
         {selectMode && (
           <p className="mb-3 text-xs text-neon-green/70">제시할 기억 조각을 고르면, 제인이 그것을 증거로 들이댄다.</p>
+        )}
+
+        {/* 약점 노출 — 이게 있어야 "찍기"가 아니라 "추리"가 된다.
+            맞으면 관계가 크게 흔들리고, 빗나가면 의심이 오른다(비용). */}
+        {selectMode && weakPoint && (
+          <div className="mb-4 rounded border border-neon-amber/40 bg-neon-amber/5 p-3">
+            <p className="mb-1 flex items-center gap-1 text-[10px] font-bold tracking-widest text-neon-amber">
+              <Crosshair size={11} /> 읽어낸 약점
+            </p>
+            <p className="text-xs leading-relaxed text-neon-amber/90">{weakPoint}</p>
+            <p className="mt-2 text-[10px] text-cyan-300/50">빗나가면 의심이 오른다. 신중하게.</p>
+          </div>
         )}
 
         {(!fragments || fragments.length === 0) && (

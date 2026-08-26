@@ -92,7 +92,11 @@ export function applyResponse(save, res, playerInput) {
   let affApplied = affRaw > 0 ? Math.min(12, Math.round(affRaw * 1.6)) : affRaw
   // 진짜 보장: 세력과 비공격 상호작용이면 모델이 호감을 깎아도(음수) 최소 +FLOOR 보장.
   // (적대적 씬에서도 협조 의도가 관계를 쌓게 — 세력 정렬이 실제 보상으로 이어지도록)
-  if (isFaction && !aggressive) affApplied = Math.max(affApplied, AFFINITY_FLOOR)
+  // 증거가 빗나간 턴엔 바닥 보장을 걷는다 — 안 그러면 "실패해도 호감이 오르는"
+  // 모순이 생겨 추리의 비용이 사라진다(플레이테스트에서 발견).
+  const evidenceMissed = res.evidence_result === 'miss'
+  if (isFaction && !aggressive && !evidenceMissed) affApplied = Math.max(affApplied, AFFINITY_FLOOR)
+  if (evidenceMissed) affApplied = Math.min(affApplied, 0) // 빗나감은 이득이 될 수 없다
   rel.affinity = clamp(rel.affinity + affApplied, 0, 100)
 
   // Trade-off ripple: aggressive/deceptive beats nudge rivals.

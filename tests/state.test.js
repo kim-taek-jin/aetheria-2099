@@ -186,3 +186,18 @@ describe('serialize / deserialize', () => {
     expect(deserialize('{not json')).toBeNull()
   })
 })
+
+describe('applyResponse — 빗나간 증거는 비용이어야 한다', () => {
+  it('miss면 호감 바닥 보장이 걷히고 이득이 되지 않는다', () => {
+    const s = createNewGame()
+    const before = s.relationships.Ren.affinity
+    const n = applyResponse(s, beat({ npc_name: 'Ren', evidence_result: 'miss', affinity_change: 3 }), '증거 제시')
+    expect(n.relationships.Ren.affinity).toBeLessThanOrEqual(before)
+  })
+  it('hit이면 정상적으로 호감이 오른다', () => {
+    const s = createNewGame()
+    const before = s.relationships.Ren.affinity
+    const n = applyResponse(s, beat({ npc_name: 'Ren', evidence_result: 'hit', affinity_change: 3 }), '증거 제시')
+    expect(n.relationships.Ren.affinity).toBeGreaterThan(before)
+  })
+})

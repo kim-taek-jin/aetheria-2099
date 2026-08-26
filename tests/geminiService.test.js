@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { safeParse, normalize, isLowQuality, hasGarble } from '../src/services/geminiService.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
+import { createNewGame } from '../src/game/state.js'
 
 const save = {
   activeNpc: 'Kael',
@@ -165,5 +166,17 @@ describe('hasGarble — 깨진 토큰 감지(스키마로는 못 잡는 층)', (
     expect(hasGarble('')).toBe(false)
     expect(hasGarble(null)).toBe(false)
     expect(hasGarble(undefined)).toBe(false)
+  })
+})
+
+describe('normalize — 증거 판정은 클라이언트가 최종', () => {
+  const base = createNewGame()
+  it('클라이언트 판정이 모델 값을 덮어쓴다', () => {
+    const n = normalize({ evidence_result: 'hit' }, base, 'miss')
+    expect(n.evidence_result).toBe('miss') // 모델이 hit이라 해도 클라이언트가 이긴다
+  })
+  it('판정이 없으면 모델 값을 존중한다(정답 미정의 씬)', () => {
+    expect(normalize({ evidence_result: 'hit' }, base, undefined).evidence_result).toBe('hit')
+    expect(normalize({ evidence_result: '엉뚱' }, base, undefined).evidence_result).toBe('none')
   })
 })

@@ -36,8 +36,8 @@ function extractPartialString(buf, key) {
 }
 
 // 한 번의 생성 요청. stream이면 onPartial로 부분 텍스트를 흘려보낸다.
-async function runOnce({ save, playerInput, signal, onPartial, freeform, url, model, temperature }) {
-  const user = buildContents(save, playerInput, { freeform })[0].parts[0].text
+async function runOnce({ save, playerInput, signal, onPartial, freeform, evidenceVerdict, url, model, temperature }) {
+  const user = buildContents(save, playerInput, { freeform, evidenceVerdict })[0].parts[0].text
   const stream = typeof onPartial === 'function'
   const body = {
     model,
@@ -112,7 +112,7 @@ async function runOnce({ save, playerInput, signal, onPartial, freeform, url, mo
 
   const parsed = safeParse(raw)
   if (!parsed) return { ok: false, code: 'PARSE', error: 'model returned non-JSON' }
-  return { ok: true, data: normalize(parsed, save) }
+  return { ok: true, data: normalize(parsed, save, evidenceVerdict) }
 }
 
 // generateBeat와 호환. apiKey 불필요(로컬).
@@ -128,17 +128,17 @@ function defectOf(data, prevLine) {
   return null
 }
 
-export async function generateBeat({ save, playerInput, signal, onPartial, freeform, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+export async function generateBeat({ save, playerInput, signal, onPartial, freeform, evidenceVerdict, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
   const prevLine = [...(save.recentTurns || [])].reverse().find((t) => t?.line)?.line
 
-  const first = await runOnce({ save, playerInput, signal, onPartial, freeform, url, model, temperature: 0.65 })
+  const first = await runOnce({ save, playerInput, signal, onPartial, freeform, evidenceVerdict, url, model, temperature: 0.65 })
   if (!first.ok) return first
   const defect = defectOf(first.data, prevLine)
   if (!defect) return first
 
   // 1회만 재생성(스트리밍 없이 — 화면에 깨진 글자가 흘러가지 않게).
   const retry = await runOnce({
-    save, playerInput, signal, freeform, url, model,
+    save, playerInput, signal, freeform, evidenceVerdict, url, model,
     temperature: defect === 'GARBLE' ? 0.45 : 0.85,
   })
   if (retry.ok && !defectOf(retry.data, prevLine)) return retry

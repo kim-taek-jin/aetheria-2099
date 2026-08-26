@@ -7,6 +7,8 @@ import {
   sceneAnchor,
   remainingEstimate,
   fullPlaythroughEstimate,
+  judgeEvidence,
+  weakPointOf,
 } from '../src/game/scenes.js'
 
 const rel = (o = {}) => ({
@@ -121,5 +123,27 @@ describe('fullPlaythroughEstimate', () => {
     const r = fullPlaythroughEstimate()
     expect(r.turns).toBeGreaterThan(0)
     expect(r.minutes).toBeGreaterThan(0)
+  })
+})
+
+describe('judgeEvidence — 증거 판정을 클라이언트가 쥔다(추리 성립 조건)', () => {
+  it('씬의 약점을 찌르는 조각은 hit', () => {
+    expect(judgeEvidence('ACT2_REN_AUCTION_01', '기억 조각 · 미매각 칩 #00-X: 사랑했던 사람의 마지막 미소.', false)).toBe('hit')
+    expect(judgeEvidence('ACT2_KAEL_HOLDING_01', '아렌의 군용 인식표 데이터', false)).toBe('hit')
+    expect(judgeEvidence('ACT2_ECHO_BROADCAST_01', '기록 조각: 스카이라인이 초록이었다.', false)).toBe('hit')
+  })
+  it('무관한 조각은 miss — 비용이 따른다', () => {
+    expect(judgeEvidence('ACT2_REN_AUCTION_01', '기록 조각: 스카이라인이 초록이었다.', false)).toBe('miss')
+    expect(judgeEvidence('ACT2_KAEL_HOLDING_01', '미매각 칩 #00-X', false)).toBe('miss')
+  })
+  it('재사용은 언제나 miss(희소성)', () => {
+    expect(judgeEvidence('ACT2_REN_AUCTION_01', '미매각 칩 #00-X', true)).toBe('miss')
+  })
+  it('정답이 정의되지 않은 씬은 null — 모델 판정을 그대로 둔다', () => {
+    expect(judgeEvidence('PROLOGUE_RAIN_01', '아무 조각', false)).toBeNull()
+  })
+  it('약점 힌트가 있는 씬은 추리 단서를 노출한다', () => {
+    expect(weakPointOf('ACT2_REN_AUCTION_01')).toMatch(/값/)
+    expect(weakPointOf('PROLOGUE_RAIN_01')).toBeNull()
   })
 })
