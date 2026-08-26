@@ -53,7 +53,7 @@ async function runOnce({ save, playerInput, signal, onPartial, freeform, evidenc
     options: {
       temperature,
       top_p: 0.9,
-      num_predict: 600,
+      num_predict: 420, // 실측 출력 중앙값 250·최대 306 → 420이면 정상 생성엔 여유, 폭주 꼬리는 차단
       repeat_penalty: 1.15,
       repeat_last_n: 128,
     },

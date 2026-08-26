@@ -28,6 +28,7 @@ import { generateBeat, emergencyBeat } from './services/geminiService.js'
 // 자체 파인튜닝 모델(로컬 Ollama). Gemini와 동일 시그니처/반환형이라 배선만 하면 됨.
 import { generateBeat as generateBeatLocal, isAvailable as ollamaIsAvailable } from './services/ollamaProvider.js'
 import { routeBeat } from './services/aiRouter.js'
+import { createPrefetcher } from './services/prefetch.js'
 import { enableAudio, setEnabled, isEnabled, setAmbience, glitchBurst, evidenceHit, evidenceMiss, endingSting } from './audio/sound.js'
 import { setMusicTone, stopMusic } from './audio/music.js'
 
@@ -113,6 +114,13 @@ export default function App() {
     }
   })
   const abortRef = useRef(null)
+  // 선생성기 — 플레이어가 읽는 동안 선택지 3개의 다음 비트를 미리 만든다.
+  const prefetchRef = useRef(null)
+  if (!prefetchRef.current) {
+    prefetchRef.current = createPrefetcher(({ save: sv, playerInput, signal }) =>
+      generateBeatLocal({ save: sv, playerInput, signal })
+    )
+  }
   const [ollamaOn, setOllamaOn] = useState(false) // 로컬 자체모델 사용 가능 여부
   const [fellBack, setFellBack] = useState(false) // 이번 턴 클라우드→로컬 폴백 여부
   const [delta, setDelta] = useState(null) // 이번 턴 상태 변화(선택의 무게 연출)
@@ -169,6 +177,24 @@ export default function App() {
       setMusicTone(beat?.background_tone || 'Neutral')
     }
   }, [beat?.background_tone, audioOn])
+
+  // 선생성: 비트가 확정되면 플레이어가 읽는 동안 선택지 3개의 다음 턴을 미리 만든다.
+  // 로컬 모델일 때만 — 클라우드에서 3배로 호출하면 사용자의 유료 쿼터를 3배로 태운다.
+  const prefetchKey = `${save.turnCount}:${save.currentNode}`
+  useEffect(() => {
+    const pf = prefetchRef.current
+    const choices = beat?.generated_choices
+    const canPrefetch =
+      usingLocal && !loading && !offlineMode && !save.endingReached && !save.failed && Array.isArray(choices) && choices.length > 0
+    if (!canPrefetch) {
+      pf.reset()
+      return
+    }
+    pf.start(prefetchKey, choices.map((c) => c.text), { save })
+    return () => pf.reset()
+    // save 전체가 아니라 서명(prefetchKey)에 반응 — 같은 상태에서 재시작하지 않도록.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefetchKey, beat, usingLocal, loading, offlineMode, save.endingReached, save.failed])
 
   // When an ending is reached, let the final line type out, then reveal
   // the ending sequence overlay.
@@ -228,6 +254,25 @@ export default function App() {
     // 하이브리드 라우팅: 키 있으면 클라우드, 없으면 로컬. 클라우드가 일시적으로
     // 막히면(무료 티어 한도 등) 로컬 자체모델로 자동 전환해 플레이가 끊기지 않게.
     // onPartial: 로컬 생성 중 부분 텍스트를 받아 화면에 흘려보낸다(대기 체감↓).
+    // 선생성 캐시 히트면 생성 없이 즉시 진행(대기 0초). 선택지 클릭에만 해당하고,
+    // 자유 입력·증거 제시는 내용을 미리 알 수 없어 항상 새로 만든다.
+    // 이 턴이 시작되면 상태가 곧 바뀌므로 선생성은 어느 쪽이든 정리한다.
+    // (선택지면 고른 것만 남기고 나머지 취소, 자유 입력·증거면 전부 취소 —
+    //  안 그러면 남은 선생성이 GPU를 두고 이번 생성과 경쟁해 더 느려진다.)
+    const cached = meta.fromChoice ? prefetchRef.current.take(prefetchKey, playerInput) : null
+    if (!meta.fromChoice) prefetchRef.current.reset()
+    if (cached) {
+      const res = await cached.catch(() => null)
+      if (res?.ok) {
+        setStreaming(null)
+        setFellBack(false)
+        applyBeat(res.data, playerInput, meta)
+        setLoading(false)
+        return
+      }
+      // 선생성이 실패했으면(취소·오류) 조용히 정상 경로로 떨어진다.
+    }
+
     const { res, via } = await routeBeat({
       apiKey: effKey, // 로컬 전용이면 빈 값 → 클라우드 건너뛰고 로컬만
       ollamaOn,
@@ -245,6 +290,15 @@ export default function App() {
 
     const data = res.ok ? res.data : emergencyBeat(save, res.code)
     if (!res.ok && audioOn) glitchBurst()
+    applyBeat(data, playerInput, meta)
+    setLoading(false)
+
+    // BYOK key rejected -> reopen modal so the player can fix it.
+    if (!res.ok && (res.code === 'BAD_KEY' || res.code === 'NO_KEY')) setShowKeyModal(true)
+  }
+
+  // 생성된 비트를 상태에 반영하는 공통 경로(정상 생성 / 선생성 캐시 히트 공용).
+  function applyBeat(data, playerInput, meta = {}) {
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
     // Evidence feedback — the payoff / the sting (전용 SFX).
     if (audioOn && data.evidence_result === 'hit') evidenceHit()
@@ -273,10 +327,6 @@ export default function App() {
       setCanonMark({ flags: newFlags, frags: newFrags, canon: newCanon })
       setTimeout(() => setCanonMark(null), 4200)
     }
-    setLoading(false)
-
-    // BYOK key rejected -> reopen modal so the player can fix it.
-    if (!res.ok && (res.code === 'BAD_KEY' || res.code === 'NO_KEY')) setShowKeyModal(true)
   }
 
   // Offline demo: feed pre-authored beats through the same pipeline.
@@ -490,7 +540,7 @@ export default function App() {
         choices={beat?.generated_choices}
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
-        onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text))}
+        onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text, { fromChoice: true }))}
         onFreeText={(t) => (offlineMode ? setShowKeyModal(true) : advance(t, { freeform: true }))}
         onPresentEvidence={() => {
           if (offlineMode) {
