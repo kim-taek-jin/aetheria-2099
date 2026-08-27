@@ -1,6 +1,7 @@
 // scenes.js — 결정론적 엔딩 게이트(eligibleEndings) 테스트.
 // 시스템(호감/의심/추적/조각)이 "열리는 엔딩"을 실제로 결정하는지 검증.
 import { describe, it, expect } from 'vitest'
+import { CHOICE_TONES } from '../src/game/lore.js'
 import {
   eligibleEndings,
   isEnding,
@@ -9,6 +10,8 @@ import {
   fullPlaythroughEstimate,
   judgeEvidence,
   weakPointOf,
+  routeChoicesOf,
+  SCENES,
 } from '../src/game/scenes.js'
 
 const rel = (o = {}) => ({
@@ -145,5 +148,28 @@ describe('judgeEvidence — 증거 판정을 클라이언트가 쥔다(추리 �
   it('약점 힌트가 있는 씬은 추리 단서를 노출한다', () => {
     expect(weakPointOf('ACT2_REN_AUCTION_01')).toMatch(/값/)
     expect(weakPointOf('PROLOGUE_RAIN_01')).toBeNull()
+  })
+})
+
+describe('routeChoicesOf — 루트 분기는 플레이어가 고른다', () => {
+  it('분기 노드는 세 세력으로 가는 선택지를 직접 제공한다', () => {
+    const rc = routeChoicesOf('ACT1_SKY_GLITCH_01')
+    expect(rc).toHaveLength(3)
+    expect(rc.map((c) => c.branch).sort()).toEqual(
+      ['ACT2_ECHO_BROADCAST_01', 'ACT2_KAEL_INTERROGATION_01', 'ACT2_REN_AUCTION_01'].sort()
+    )
+  })
+  it('각 branch는 그 씬의 next에 실제로 존재한다(끊긴 링크 방지)', () => {
+    const rc = routeChoicesOf('ACT1_SKY_GLITCH_01')
+    const next = SCENES.ACT1_SKY_GLITCH_01.next
+    for (const c of rc) expect(next).toContain(c.branch)
+  })
+  it('각 선택지는 유효한 톤을 가진다(UI 렌더 안전)', () => {
+    for (const c of routeChoicesOf('ACT1_SKY_GLITCH_01')) {
+      expect(CHOICE_TONES).toContain(c.tone)
+    }
+  })
+  it('분기 노드가 아니면 null — 모델 생성 선택지를 쓴다', () => {
+    expect(routeChoicesOf('PROLOGUE_RAIN_01')).toBeNull()
   })
 })

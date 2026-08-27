@@ -13,7 +13,7 @@ import EndingScreen from './components/EndingScreen.jsx'
 import FailureScreen from './components/FailureScreen.jsx'
 
 import { OPENING } from './game/lore.js'
-import { SCENES, remainingEstimate, judgeEvidence, weakPointOf } from './game/scenes.js'
+import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import {
   createNewGame,
@@ -178,12 +178,16 @@ export default function App() {
     }
   }, [beat?.background_tone, audioOn])
 
+  // 루트 분기 노드에서는 authoring 된 선택지를 쓴다(모델 생성분 대신).
+  // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
+  const shownChoices = routeChoicesOf(save.currentNode) || beat?.generated_choices || []
+
   // 선생성: 비트가 확정되면 플레이어가 읽는 동안 선택지 3개의 다음 턴을 미리 만든다.
   // 로컬 모델일 때만 — 클라우드에서 3배로 호출하면 사용자의 유료 쿼터를 3배로 태운다.
   const prefetchKey = `${save.turnCount}:${save.currentNode}`
   useEffect(() => {
     const pf = prefetchRef.current
-    const choices = beat?.generated_choices
+    const choices = shownChoices
     const canPrefetch =
       usingLocal && !loading && !offlineMode && !save.endingReached && !save.failed && Array.isArray(choices) && choices.length > 0
     if (!canPrefetch) {
@@ -299,6 +303,8 @@ export default function App() {
 
   // 생성된 비트를 상태에 반영하는 공통 경로(정상 생성 / 선생성 캐시 히트 공용).
   function applyBeat(data, playerInput, meta = {}) {
+    // 루트 분기는 플레이어의 선택이 최종이다 — 모델이 다른 노드를 골라도 덮어쓴다.
+    if (meta.forceBranch) data = { ...data, story_branch: meta.forceBranch }
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
     // Evidence feedback — the payoff / the sting (전용 SFX).
     if (audioOn && data.evidence_result === 'hit') evidenceHit()
@@ -537,10 +543,10 @@ export default function App() {
       <MainScreen beat={beat} glitch={glitch} loading={loading} streaming={streaming} />
 
       <InteractionPanel
-        choices={beat?.generated_choices}
+        choices={shownChoices}
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
-        onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text, { fromChoice: true }))}
+        onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text, { fromChoice: true, forceBranch: c.branch }))}
         onFreeText={(t) => (offlineMode ? setShowKeyModal(true) : advance(t, { freeform: true }))}
         onPresentEvidence={() => {
           if (offlineMode) {

@@ -145,6 +145,15 @@ export const SCENES = {
     revealsFragment: '기록 조각: 도시 밖 스카이라인이 회색이 아니었다. 잠깐이지만 — 초록이었다.',
     jayneHook:
       '초록 글리치가 제인의 눈꺼풀 안쪽 잔상과 정확히 겹친다 — 기시감. new_fragments에 추가 가능: "기억 조각 · 빈자리 #2: 이 초록을 나는 전에 본 적 있다. 잊기 전의 내가, 저 밖에 있었나?"',
+    // 게임의 중심 선택(팔다/묻다/터뜨리다)을 플레이어에게 직접 준다.
+    // 이전에는 모델이 story_branch로 루트를 정해 전략과 무관하게 흘렀다 —
+    // 플레이테스트 5판에서 은신·공격·정직이 모두 같은 루트로 빨려 들어갔다.
+    // branch는 클라이언트가 강제하므로 선택이 반드시 그 루트로 이어진다.
+    routeChoices: [
+      { text: '[거래] 렌에게 값을 매기게 한다.', tone: 'Deceptive', branch: 'ACT2_REN_AUCTION_01' },
+      { text: '[자수] 카엘에게 이 영상을 넘긴다.', tone: 'Honest', branch: 'ACT2_KAEL_INTERROGATION_01' },
+      { text: '[폭로] 에코의 주파수를 연다.', tone: 'Aggressive', branch: 'ACT2_ECHO_BROADCAST_01' },
+    ],
     next: ['ACT2_REN_AUCTION_01', 'ACT2_KAEL_INTERROGATION_01', 'ACT2_ECHO_BROADCAST_01'],
     gate: {
       ACT2_REN_AUCTION_01: 'Ren affinity가 가장 높거나 플레이어가 이익/거래를 택할 때',
@@ -601,6 +610,11 @@ export function judgeEvidence(nodeId, fragment, alreadyUsed) {
   if (alreadyUsed) return 'miss' // 재사용은 언제나 빗나감(희소성)
   const t = String(fragment || '')
   return keys.some((k) => t.includes(k)) ? 'hit' : 'miss'
+}
+
+// 플레이어가 직접 고르는 루트 분기 선택지(없으면 null → 모델 생성 선택지 사용).
+export function routeChoicesOf(nodeId) {
+  return SCENES[nodeId]?.routeChoices || null
 }
 
 // 이 씬에서 노출할 약점 힌트(없으면 null).

@@ -10,11 +10,14 @@ const MAX_TURNS = Number(process.env.MAX_TURNS || 22)
 const OUT = process.env.OUT || 'playtest-report.json'
 
 // 톤 라벨(버튼 텍스트) → 전략별 선호 우선순위.
+// 루트 분기 노드의 authoring 선택지 라벨(거래/자수/폭로)도 선호에 포함한다.
+// 그래야 전략이 실제로 자기 성향의 세력으로 간다 — 이게 빠져 있으면 분기가
+// 사실상 무작위가 되어 "루트 분포"를 측정하는 의미가 없다.
 const STRATEGIES = [
-  { name: '정직·신뢰', prefer: ['솔직', '조사'] },
-  { name: '공격·폭로', prefer: ['도발', '위협', '해킹'] },
+  { name: '정직·질서', prefer: ['자수', '솔직', '조사'] },
+  { name: '공격·폭로', prefer: ['폭로', '도발', '위협', '해킹'] },
   { name: '은신·잠행', prefer: ['은신', '도주'] },
-  { name: '거래·실리', prefer: ['기만', '거짓말', '조사'] },
+  { name: '거래·실리', prefer: ['거래', '기만', '거짓말', '조사'] },
   { name: '무작위', prefer: [] },
 ]
 
