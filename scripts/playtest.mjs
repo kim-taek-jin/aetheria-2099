@@ -21,7 +21,10 @@ const STRATEGIES = [
 const browser = await chromium.launch()
 const ctx = await browser.newContext({ viewport: { width: 1000, height: 800 } })
 const page = await ctx.newPage()
-await page.goto(URL, { waitUntil: 'networkidle' })
+// networkidle을 쓰면 안 된다 — 선생성(prefetch)이 백그라운드로 계속 요청을
+// 날리기 때문에 네트워크가 영원히 유휴가 되지 않는다(v5에서 실제로 타임아웃).
+await page.goto(URL, { waitUntil: 'domcontentloaded' })
+await page.waitForSelector('button')
 await page.evaluate(() => {
   localStorage.setItem('aetheria2099.introSeen', '1')
   localStorage.setItem('aetheria2099.tutorialSeen', '1')
@@ -48,7 +51,8 @@ async function playOne(strat, i) {
     localStorage.removeItem('aetheria2099.save.v1')
     localStorage.removeItem('aetheria2099.beat.v1')
   })
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('button')
   await page.waitForTimeout(1500)
 
   let turns = 0

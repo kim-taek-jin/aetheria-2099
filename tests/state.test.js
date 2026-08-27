@@ -201,3 +201,31 @@ describe('applyResponse — 빗나간 증거는 비용이어야 한다', () => {
     expect(n.relationships.Ren.affinity).toBeGreaterThan(before)
   })
 })
+
+describe('applyResponse — 조각 획득 보장(모델에 맡기지 않는다)', () => {
+  // ACT1_SKY_GLITCH_01 은 revealsFragment("초록 하늘")을 authoring 한 씬.
+  const atGlitch = () => {
+    const s = createNewGame()
+    s.currentNode = 'ACT1_SKY_GLITCH_01'
+    return s
+  }
+  it('조각을 가진 노드를 벗어나면 클라이언트가 지급한다', () => {
+    const n = applyResponse(atGlitch(), beat({ story_branch: 'ACT2_REN_AUCTION_01' }), 'x')
+    expect(n.fragments.length).toBe(1)
+  })
+  it('같은 노드에 머무르면 지급하지 않는다', () => {
+    const n = applyResponse(atGlitch(), beat({ story_branch: 'ACT1_SKY_GLITCH_01' }), 'x')
+    expect(n.fragments).toEqual([])
+  })
+  it('조각이 없는 씬을 벗어날 땐 아무것도 주지 않는다', () => {
+    const s = createNewGame() // PROLOGUE_RAIN_01 — revealsFragment 없음
+    const n = applyResponse(s, beat({ story_branch: 'PROLOGUE_CHOICE_01' }), 'x')
+    expect(n.fragments).toEqual([])
+  })
+  it('이미 가진 조각은 두 번 주지 않는다', () => {
+    const once = applyResponse(atGlitch(), beat({ story_branch: 'ACT2_REN_AUCTION_01' }), 'x')
+    const back = { ...once, currentNode: 'ACT1_SKY_GLITCH_01' }
+    const again = applyResponse(back, beat({ story_branch: 'ACT2_REN_AUCTION_01' }), 'x')
+    expect(again.fragments.length).toBe(once.fragments.length)
+  })
+})

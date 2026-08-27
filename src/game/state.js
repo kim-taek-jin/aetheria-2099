@@ -10,6 +10,8 @@
 //      the exact same shape. Phase 2 conversion cost ~ 0.
 // ============================================================
 
+import { SCENES } from './scenes.js'
+
 export const SAVE_VERSION = 1
 export const STORAGE_KEY = 'aetheria2099.save.v1'
 export const API_KEY_STORAGE = 'aetheria2099.byok'
@@ -137,6 +139,18 @@ export function applyResponse(save, res, playerInput) {
   if (Array.isArray(res.set_flags)) {
     for (const f of res.set_flags) {
       if (typeof f === 'string' && f.trim()) next.flags[f.trim()] = true
+    }
+  }
+
+  // 조각 획득 보장(클라이언트 권한). 씬 바이블이 revealsFragment로 "이 장면의
+  // 진실"을 authoring 해두지만, 획득이 모델의 new_fragments에만 의존하면 소형
+  // 모델은 사실상 내주지 않는다 — 자동 플레이테스트 5판/82턴에서 조각 1개.
+  // 그 결과 증거 제시(추리)라는 핵심 기믹이 도달 불가능한 콘텐츠가 된다.
+  // → 노드를 벗어나는 순간(= 그 장면의 진실을 통과한 순간) 클라이언트가 지급한다.
+  if (nextNode !== save.currentNode) {
+    const earned = SCENES[save.currentNode]?.revealsFragment
+    if (typeof earned === 'string' && earned.trim() && !next.fragments.includes(earned.trim())) {
+      next.fragments.push(earned.trim())
     }
   }
 
