@@ -148,9 +148,17 @@ export function applyResponse(save, res, playerInput) {
   // 그 결과 증거 제시(추리)라는 핵심 기믹이 도달 불가능한 콘텐츠가 된다.
   // → 노드를 벗어나는 순간(= 그 장면의 진실을 통과한 순간) 클라이언트가 지급한다.
   if (nextNode !== save.currentNode) {
+    // 떠나는 씬의 "진실"을 지급한다.
     const earned = SCENES[save.currentNode]?.revealsFragment
     if (typeof earned === 'string' && earned.trim() && !next.fragments.includes(earned.trim())) {
       next.fragments.push(earned.trim())
+    }
+    // '빈자리' 조각은 반대로 **진입 시** 지급한다. #4가 엔딩 선택 노드에 있어서,
+    // 떠날 때 주면 엔딩 자격 판정(eligibleEndings)이 이미 끝난 뒤라 진엔딩이
+    // 영원히 열리지 않는다.
+    const gap = SCENES[nextNode]?.gapFragment
+    if (typeof gap === 'string' && gap.trim() && !next.fragments.includes(gap.trim())) {
+      next.fragments.push(gap.trim())
     }
   }
 

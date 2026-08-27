@@ -217,10 +217,16 @@ describe('applyResponse — 조각 획득 보장(모델에 맡기지 않는다)'
     const n = applyResponse(atGlitch(), beat({ story_branch: 'ACT1_SKY_GLITCH_01' }), 'x')
     expect(n.fragments).toEqual([])
   })
-  it('조각이 없는 씬을 벗어날 땐 아무것도 주지 않는다', () => {
-    const s = createNewGame() // PROLOGUE_RAIN_01 — revealsFragment 없음
-    const n = applyResponse(s, beat({ story_branch: 'PROLOGUE_CHOICE_01' }), 'x')
+  it('양쪽 다 조각이 없는 이동은 아무것도 주지 않는다', () => {
+    // PROLOGUE_RAIN_01(revealsFragment 없음) → ACT1_REN_GARAGE_01(gapFragment 없음)
+    const s = createNewGame()
+    const n = applyResponse(s, beat({ story_branch: 'ACT1_REN_GARAGE_01' }), 'x')
     expect(n.fragments).toEqual([])
+  })
+  it("'빈자리' 조각은 진입할 때 지급된다(엔딩 자격 판정보다 먼저)", () => {
+    const s = createNewGame() // PROLOGUE_RAIN_01
+    const n = applyResponse(s, beat({ story_branch: 'PROLOGUE_CHOICE_01' }), 'x')
+    expect(n.fragments.some((f) => f.includes('빈자리 #1'))).toBe(true)
   })
   it('이미 가진 조각은 두 번 주지 않는다', () => {
     const once = applyResponse(atGlitch(), beat({ story_branch: 'ACT2_REN_AUCTION_01' }), 'x')

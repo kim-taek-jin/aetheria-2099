@@ -63,6 +63,11 @@ export const SCENES = {
     dilemma: '믿을 수 없는 정보상 렌에게 칩의 존재를 드러낼 것인가.',
     jayneHook:
       '배달원의 마지막 말 "너였구나"가 제인의 빈 3년을 건드린다. 이 순간을 잡으면 new_fragments에 추가: "기억 조각 · 빈자리 #1: 그는 나를 알았다. 나는 그를 모른다. 내 지워진 3년 속의 얼굴일까." (담담하게, 미스터리로만)',
+    // 진엔딩(ENDING_JAYNE_ORIGIN)용 '빈자리' 조각. jayneHook 산문 안에만 있어
+    // 모델이 내주기만 기다렸고, 그래서 10판 내내 아무도 얻지 못했다 →
+    // 기계가 읽는 필드로 승격해 노드 통과 시 클라이언트가 지급한다.
+    gapFragment:
+      '기억 조각 · 빈자리 #1: 그는 나를 알았다. 나는 그를 모른다. 내 지워진 3년 속의 얼굴일까.',
     next: ['ACT1_REN_GARAGE_01'],
   },
 
@@ -154,6 +159,11 @@ export const SCENES = {
       { text: '[자수] 카엘에게 이 영상을 넘긴다.', tone: 'Honest', branch: 'ACT2_KAEL_INTERROGATION_01' },
       { text: '[폭로] 에코의 주파수를 연다.', tone: 'Aggressive', branch: 'ACT2_ECHO_BROADCAST_01' },
     ],
+    // 진엔딩(ENDING_JAYNE_ORIGIN)용 '빈자리' 조각. jayneHook 산문 안에만 있어
+    // 모델이 내주기만 기다렸고, 그래서 10판 내내 아무도 얻지 못했다 →
+    // 기계가 읽는 필드로 승격해 노드 통과 시 클라이언트가 지급한다.
+    gapFragment:
+      '기억 조각 · 빈자리 #2: 이 초록을 나는 전에 본 적 있다. 잊기 전의 내가, 저 밖에 있었나?',
     next: ['ACT2_REN_AUCTION_01', 'ACT2_KAEL_INTERROGATION_01', 'ACT2_ECHO_BROADCAST_01'],
     gate: {
       ACT2_REN_AUCTION_01: 'Ren affinity가 가장 높거나 플레이어가 이익/거래를 택할 때',
@@ -440,6 +450,11 @@ export const SCENES = {
     revealsFragment: '기록 조각: 요람과 감옥은 같은 설계도에서 태어났다.',
     jayneHook:
       '펄스가 제인의 기억을 침식하며 자장가가 또렷해진다. new_fragments에 추가: "기억 조각 · 빈자리 #3: \'잠들렴, 아침이 오면…\' 어머니의 목소리가 아니었다. 3년 전 섹터 9 단말기 앞에서 내 머릿속에 직접 인코딩된 리엔의 오리지널 음성이었다."',
+    // 진엔딩(ENDING_JAYNE_ORIGIN)용 '빈자리' 조각. jayneHook 산문 안에만 있어
+    // 모델이 내주기만 기다렸고, 그래서 10판 내내 아무도 얻지 못했다 →
+    // 기계가 읽는 필드로 승격해 노드 통과 시 클라이언트가 지급한다.
+    gapFragment:
+      '기억 조각 · 빈자리 #3: \'잠들렴, 아침이 오면…\' 어머니의 목소리가 아니었다. 3년 전 섹터 9 단말기 앞에서 내 머릿속에 직접 인코딩된 리엔의 오리지널 음성이었다.',
     next: ['ACT3_VIGIL_01'],
   },
   // [신규] Act 3 심화 — 설계자 대면 직전, 곁에 선 자와의 마지막 순간.
@@ -487,6 +502,11 @@ export const SCENES = {
       '기록 조각: “나는 너희를 사랑했다. 그래서 가두었다.” 그 일그러진 애정이 50년 동안 이 도시를 감싸고 있던 비극의 시작이자 마지막 사슬이었다.',
     jayneHook:
       '리엔과 대면하며 제인의 정체 반전이 드러날 수 있다 — affinity가 높거나 빈자리 조각을 모았을 때만. new_fragments에 추가: "기억 조각 · 빈자리 #4: 나는 삼류 브로커가 아니었다. 3년 전 리엔의 수석 연구원이었고, 정화된 외부의 하늘을 본 뒤 이 열쇠(칩 #00)를 들고 스스로 기억을 지운 채 슬럼가로 내려왔던 피험자였다." (개인 서사의 정점이니 함부로 남발하지 말 것)',
+    // 진엔딩(ENDING_JAYNE_ORIGIN)용 '빈자리' 조각. jayneHook 산문 안에만 있어
+    // 모델이 내주기만 기다렸고, 그래서 10판 내내 아무도 얻지 못했다 →
+    // 기계가 읽는 필드로 승격해 노드 통과 시 클라이언트가 지급한다.
+    gapFragment:
+      '기억 조각 · 빈자리 #4: 나는 삼류 브로커가 아니었다. 3년 전 리엔의 수석 연구원이었고, 정화된 외부의 하늘을 본 뒤 이 열쇠(칩 #00)를 들고 스스로 기억을 지운 채 슬럼가로 내려왔던 피험자였다.',
     next: [
       'ENDING_REN_MONOPOLY',
       'ENDING_KAEL_SILENCE',
@@ -612,6 +632,27 @@ export function judgeEvidence(nodeId, fragment, alreadyUsed) {
   return keys.some((k) => t.includes(k)) ? 'hit' : 'miss'
 }
 
+// 결말 선택 — 게임 최대의 선택을 모델에 맡기지 않는다.
+// 이전에는 모델이 story_branch로 결말을 골랐고, 못 고르면 자격 목록의 첫 항목이
+// 강제됐다. 그래서 진엔딩이 열리자마자 세력 엔딩을 전부 밀어냈다(5판 중 3판).
+// 이제 자격을 갖춘 결말만 선택지로 제시하고, 플레이어가 고른 것을 강제한다.
+const ENDING_CHOICES = {
+  ENDING_REN_MONOPOLY: { text: '[거래] 진실을 최고가에 넘긴다.', tone: 'Deceptive' },
+  ENDING_KAEL_SILENCE: { text: '[봉인] 하늘을 다시 닫는다.', tone: 'Honest' },
+  ENDING_ECHO_BREAKOUT: { text: '[파괴] 요람을 부순다.', tone: 'Aggressive' },
+  ENDING_NEXUS_TRUST: { text: '[신뢰] NEXUS에게 판단을 맡긴다.', tone: 'Honest' },
+  ENDING_JAYNE_ORIGIN: { text: '[각성] 지워진 내 이름을 되찾는다.', tone: 'Investigate' },
+  ENDING_SOLO_EXIT: { text: '[이탈] 아무 편도 들지 않고 걸어 나간다.', tone: 'Flee' },
+}
+
+// 지금 세이브로 고를 수 있는 결말 선택지(엔딩 선택 노드가 아니면 null).
+export function endingChoicesFor(save) {
+  if (!SCENES[save.currentNode]?.endingChoiceNode) return null
+  const elig = eligibleEndings(save)
+  const out = elig.filter((id) => ENDING_CHOICES[id]).map((id) => ({ ...ENDING_CHOICES[id], branch: id }))
+  return out.length ? out : null
+}
+
 // 플레이어가 직접 고르는 루트 분기 선택지(없으면 null → 모델 생성 선택지 사용).
 export function routeChoicesOf(nodeId) {
   return SCENES[nodeId]?.routeChoices || null
@@ -680,23 +721,33 @@ export function eligibleEndings(save) {
   const maxA = Math.max(...factions.map(A))
   const top = factions.find((n) => A(n) === maxA)
   const gapCount = (save.fragments || []).filter((f) => /빈자리/.test(f)).length
-  const twoTrusted = factions.filter((n) => A(n) >= 50).length >= 2
+  // 두 세력 모두 50 이상은 구조적으로 불가능하다 — Act2 루트가 배타적이라
+  // 한 세력만 무대에 오르고, 플레이테스트 10판에서 두 번째 세력 최고치가 28이었다.
+  // 실제로 도달 가능하면서도 어려운 형태로 바꾼다: 한 세력과 깊은 신뢰(>=40) +
+  // 다른 세력과도 끊기지 않은 관계(>=25). Act1에서 렌을 쌓고 다른 루트를
+  // 택한 뒤 조용히 움직여야만 성립한다.
+  const sortedA = factions.map(A).sort((a, b) => b - a)
+  const broadTrust = sortedA[0] >= 40 && sortedA[1] >= 25
   const allCalm = factions.every((n) => S(n) < 70)
   const heat = save.heat || 0
 
   const out = []
-  // Personal true-ending: all four "빈자리" (gap) fragments recovered.
-  if (gapCount >= 4) out.push('ENDING_JAYNE_ORIGIN')
   // Hidden trust-ending: everyone calm, broad trust, and you stayed off the grid.
-  if (allCalm && twoTrusted && heat < 70) out.push('ENDING_NEXUS_TRUST')
+  if (allCalm && broadTrust && heat < 50) out.push('ENDING_NEXUS_TRUST')
   // Faction endings: only if you actually built an alliance.
-  if (maxA >= 20) {
+  // 호감 바닥 보장(+6/턴) 때문에 20 미만으로 끝나는 게 사실상 불가능했다
+  // (10판 최소값 20) → 홀로 걷는 길이 죽어 있었다. 25로 올려 실제로 열어둔다.
+  if (maxA >= 25) {
     if (top === 'Ren') out.push('ENDING_REN_MONOPOLY')
     if (top === 'Kael') out.push('ENDING_KAEL_SILENCE')
     if (top === 'Echo') out.push('ENDING_ECHO_BREAKOUT')
   }
+  // 개인 진엔딩은 목록 뒤에 둔다. 앞에 두면 모델이 결말을 못 고를 때의 강제
+  // 폴백(elig[0])이 항상 진엔딩이 되어 세력 엔딩을 전부 밀어낸다(v8에서 5판 중 3판).
+  // 이제 결말은 플레이어가 고르고, 이 순서는 폴백 안전망일 뿐이다.
+  if (gapCount >= 4) out.push('ENDING_JAYNE_ORIGIN')
   // Lone-wolf ending: no strong ally.
-  if (maxA < 20) out.push("ENDING_SOLO_EXIT")
+  if (maxA < 25) out.push('ENDING_SOLO_EXIT')
   // Safety net — never leave the finale with nowhere to go.
   if (out.length === 0) out.push('ENDING_SOLO_EXIT')
   return [...new Set(out)]

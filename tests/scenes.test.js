@@ -11,6 +11,7 @@ import {
   judgeEvidence,
   weakPointOf,
   routeChoicesOf,
+  endingChoicesFor,
   SCENES,
 } from '../src/game/scenes.js'
 
@@ -171,5 +172,65 @@ describe('routeChoicesOf — 루트 분기는 플레이어가 고른다', () => 
   })
   it('분기 노드가 아니면 null — 모델 생성 선택지를 쓴다', () => {
     expect(routeChoicesOf('PROLOGUE_RAIN_01')).toBeNull()
+  })
+})
+
+describe('eligibleEndings — 도달 불가였던 3종이 실제로 열리는가', () => {
+  const mk = (r, k, e, heat = 10, fragments = [], sus = 10) => ({
+    relationships: {
+      Ren: { affinity: r, suspicion: sus },
+      Kael: { affinity: k, suspicion: sus },
+      Echo: { affinity: e, suspicion: sus },
+    },
+    heat,
+    fragments,
+  })
+  const GAPS = ['빈자리 #1', '빈자리 #2', '빈자리 #3', '빈자리 #4']
+
+  it('빈자리 조각 4개를 모으면 진엔딩이 열린다', () => {
+    expect(eligibleEndings(mk(58, 10, 5, 20, GAPS))).toContain('ENDING_JAYNE_ORIGIN')
+  })
+  it('3개까지는 열리지 않는다(완주 보상 유지)', () => {
+    expect(eligibleEndings(mk(58, 10, 5, 20, GAPS.slice(0, 3)))).not.toContain('ENDING_JAYNE_ORIGIN')
+  })
+  it('한 세력 깊은 신뢰 + 다른 세력과도 관계 유지 + 저추적이면 히든 엔딩', () => {
+    expect(eligibleEndings(mk(28, 5, 40, 0))).toContain('ENDING_NEXUS_TRUST')
+  })
+  it('추적이 높으면 히든 엔딩은 닫힌다', () => {
+    expect(eligibleEndings(mk(28, 5, 40, 80))).not.toContain('ENDING_NEXUS_TRUST')
+  })
+  it('한쪽만 높고 나머지가 끊겼으면 히든 엔딩은 안 열린다', () => {
+    expect(eligibleEndings(mk(58, 10, 5, 0))).not.toContain('ENDING_NEXUS_TRUST')
+  })
+  it('어느 세력과도 약하게 끝나면 홀로 걷는 길', () => {
+    expect(eligibleEndings(mk(12, 5, 8))).toEqual(['ENDING_SOLO_EXIT'])
+  })
+  it('세력 엔딩과 홀로 걷는 길은 동시에 열리지 않는다', () => {
+    for (const s of [mk(24, 5, 5), mk(25, 5, 5), mk(40, 5, 5)]) {
+      const e = eligibleEndings(s)
+      expect(e.includes('ENDING_SOLO_EXIT') && e.includes('ENDING_REN_MONOPOLY')).toBe(false)
+    }
+  })
+})
+
+describe('endingChoicesFor — 결말은 플레이어가 고른다', () => {
+  const at = (frags, r = 58, k = 10, e = 5) => ({
+    currentNode: 'ACT3_DESIGNER_CONFRONT_01',
+    relationships: { Ren: { affinity: r, suspicion: 10 }, Kael: { affinity: k, suspicion: 10 }, Echo: { affinity: e, suspicion: 10 } },
+    heat: 20,
+    fragments: frags,
+  })
+  it('자격을 갖춘 결말만 선택지로 나온다', () => {
+    const c = endingChoicesFor(at([]))
+    expect(c.map((x) => x.branch)).toEqual(['ENDING_REN_MONOPOLY'])
+  })
+  it('진엔딩 자격이 있으면 함께 제시하되 강요하지 않는다', () => {
+    const c = endingChoicesFor(at(['빈자리 #1', '빈자리 #2', '빈자리 #3', '빈자리 #4']))
+    const ids = c.map((x) => x.branch)
+    expect(ids).toContain('ENDING_JAYNE_ORIGIN')
+    expect(ids).toContain('ENDING_REN_MONOPOLY') // 세력 엔딩이 밀려나지 않는다
+  })
+  it('엔딩 선택 노드가 아니면 null', () => {
+    expect(endingChoicesFor({ currentNode: 'PROLOGUE_RAIN_01', relationships: {}, fragments: [] })).toBeNull()
   })
 })
