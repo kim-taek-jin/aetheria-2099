@@ -271,7 +271,7 @@ export default function App() {
     // 선생성 캐시 히트면 생성 없이 즉시 진행(대기 0초). 선택지 클릭에만 해당하고,
     // 자유 입력·증거 제시는 내용을 미리 알 수 없어 항상 새로 만든다.
     // 손으로 쓴 씬의 선택지라면 모델을 부르지 않는다 — 즉시, 그리고 잘 쓰인 글로.
-    const scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput) : null
+    const scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
     if (scripted) {
       prefetchRef.current.reset()
       setStreaming(null)

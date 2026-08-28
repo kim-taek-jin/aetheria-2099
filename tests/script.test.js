@@ -38,8 +38,12 @@ describe('script — enum 계약(UI 렌더 안전)', () => {
       }
     }
   })
-  it('모든 씬은 선택지 3개를 가진다', () => {
-    for (const id of NODES) expect(SCRIPT[id].choices).toHaveLength(3)
+  it('모든 씬은 선택지를 3개 가진다(결말 노드만 자격별 6개)', () => {
+    for (const id of NODES) {
+      const n = SCRIPT[id].choices.length
+      if (SCENES[id].endingChoiceNode) expect(n).toBe(6)
+      else expect(n, `${id}`).toBe(3)
+    }
   })
 })
 
@@ -47,17 +51,19 @@ describe('script — 선택마다 글이 실제로 달라진다(핵심 요구)',
   it('같은 씬의 세 반응 나레이션이 서로 다르다', () => {
     for (const id of NODES) {
       const texts = SCRIPT[id].choices.map((c) => c.reaction.narration)
-      expect(new Set(texts).size, `${id}의 반응이 중복`).toBe(3)
+      expect(new Set(texts).size, `${id}의 반응이 중복`).toBe(texts.length)
     }
   })
   it('같은 씬의 세 반응 대사가 서로 다르다', () => {
     for (const id of NODES) {
       const lines = SCRIPT[id].choices.map((c) => c.reaction.line)
-      expect(new Set(lines).size, `${id}의 대사가 중복`).toBe(3)
+      expect(new Set(lines).size, `${id}의 대사가 중복`).toBe(lines.length)
     }
   })
   it('선택마다 게이지 변화가 동일하지 않다', () => {
     for (const id of NODES) {
+      // 결말 노드는 게이지가 의미 없다(엔딩으로 수렴).
+      if (SCENES[id].endingChoiceNode) continue
       const fx = SCRIPT[id].choices.map((c) => JSON.stringify(c.effects || {}))
       expect(new Set(fx).size, `${id}의 효과가 전부 같음`).toBeGreaterThan(1)
     }
@@ -96,9 +102,13 @@ describe('choiceBeat — 모델 출력과 같은 형태', () => {
   it('없는 선택이면 null(모델 경로로 폴백)', () => {
     expect(choiceBeat(first, '내가 지어낸 행동')).toBeNull()
   })
-  it('authoring 되지 않은 노드는 null', () => {
-    expect(choiceBeat('ACT3_VIGIL_01', '아무거나')).toBeNull()
-    expect(hasScript('ACT3_VIGIL_01')).toBe(false)
+  it('authoring 되지 않은 노드는 null(엔딩 노드는 EndingScreen이 맡는다)', () => {
+    expect(choiceBeat('ENDING_SOLO_EXIT', '아무거나')).toBeNull()
+    expect(hasScript('ENDING_SOLO_EXIT')).toBe(false)
+  })
+  it('본편 18개 씬이 빠짐없이 authoring 되어 있다', () => {
+    const story = Object.keys(SCENES).filter((id) => !id.startsWith('ENDING_'))
+    for (const id of story) expect(hasScript(id), `${id} 미작성`).toBe(true)
   })
 })
 
@@ -115,5 +125,38 @@ describe('script → 상태머신 통합', () => {
   })
   it('도입 beat은 제자리에 머문다', () => {
     expect(openingBeat('PROLOGUE_RAIN_01').story_branch).toBe('PROLOGUE_RAIN_01')
+  })
+})
+
+describe('script — 전 루트 완주 가능성(끊긴 곳 없이 결말까지)', () => {
+  it('세 루트 모두 authoring 만으로 결말 노드까지 닿는다', () => {
+    for (const start of ['ACT2_REN_AUCTION_01', 'ACT2_KAEL_INTERROGATION_01', 'ACT2_ECHO_BROADCAST_01']) {
+      let node = start
+      const seen = new Set()
+      while (SCRIPT[node] && !seen.has(node)) {
+        seen.add(node)
+        node = SCRIPT[node].choices[0].next
+      }
+      expect(node, `${start} 루트가 결말에 못 닿음`).toMatch(/^ENDING_/)
+    }
+  })
+  it('프롤로그에서 시작해도 결말까지 이어진다', () => {
+    let node = 'PROLOGUE_RAIN_01'
+    const seen = new Set()
+    while (SCRIPT[node] && !seen.has(node)) {
+      seen.add(node)
+      node = SCRIPT[node].choices[0].next
+    }
+    expect(node).toMatch(/^ENDING_/)
+  })
+})
+
+describe('script — byRoute(동행별 장면)', () => {
+  it('마지막 격벽 씬이 동행에 따라 달라진다', () => {
+    const texts = ['Ren', 'Kael', 'Echo'].map((r) => openingBeat('ACT3_VIGIL_01', r).npc_response)
+    expect(new Set(texts).size).toBe(3)
+  })
+  it('루트가 없으면 기본 장면으로 폴백한다', () => {
+    expect(openingBeat('ACT3_VIGIL_01').npc_response).toBeTruthy()
   })
 })

@@ -26,6 +26,7 @@
 // ============================================================
 
 import { voiceBlock } from './voices.js'
+import { hasScript } from './script.js'
 import { backstoryBlock } from './backstories.js'
 
 export const SCENES = {
@@ -686,7 +687,7 @@ export function sceneAnchor(nodeId, turnsOnNode = 0) {
   if (s.revealsFragment) lines.push(`FRAGMENT_ON_REVEAL: ${s.revealsFragment}`)
   if (s.jayneHook) lines.push(`JAYNE_HOOK: ${s.jayneHook}`)
   // Pacing signal: how many turns already spent vs the node's budget.
-  const budget = s.beatBudget || 2
+  const budget = s.beatBudget || 2 // AI 페이싱 힌트: 자유 입력 처리 시 씬에 머무는 기준
   const pacing =
     turnsOnNode + 1 >= budget
       ? `PACING: budget reached (turn ${turnsOnNode + 1}/${budget}) — resolve this scene's goal and MOVE to an ALLOWED_NEXT node this turn.`
@@ -766,15 +767,19 @@ export function eligibleEndings(save) {
 // ---- Playtime estimate ------------------------------------
 // Sum of beatBudgets along the SHORTEST path from a node to any ending.
 // Used to tell the player roughly how many turns / minutes remain.
+// 손으로 쓴 씬은 한 씬 = 한 결정이고 AI 대기가 없다. 모델이 서사를 만드는
+// 씬은 여러 턴을 머무르고 생성 대기도 붙는다 — 둘을 같은 값으로 세면
+// 하단의 "엔딩까지 N턴" 표시가 실제와 어긋난다.
+const budgetOf = (nodeId) => (hasScript(nodeId) ? 1 : SCENES[nodeId]?.beatBudget || 2)
 const SEC_PER_TURN = 40 // ~read + decide + AI latency
 
 function turnsToEnding(nodeId, seen = new Set()) {
   const s = SCENES[nodeId]
   if (!s) return 0
-  if (s.ending) return s.beatBudget || 1
+  if (s.ending) return budgetOf(nodeId)
   if (seen.has(nodeId)) return 0
   seen.add(nodeId)
-  const budget = s.beatBudget || 2
+  const budget = budgetOf(nodeId)
   const nexts = s.next || []
   if (nexts.length === 0) return budget
   const best = Math.min(...nexts.map((n) => turnsToEnding(n, new Set(seen))))
@@ -791,7 +796,7 @@ export function fullPlaythroughEstimate() {
 export function remainingEstimate(nodeId, turnsOnNode = 0) {
   const s = SCENES[nodeId]
   if (!s) return { turns: 0, minutes: 0 }
-  const remainingHere = Math.max(0, (s.beatBudget || 2) - turnsOnNode)
+  const remainingHere = Math.max(0, budgetOf(nodeId) - turnsOnNode)
   let turns = remainingHere
   if (!s.ending && s.next?.length) {
     turns += Math.min(...s.next.map((n) => turnsToEnding(n)))
