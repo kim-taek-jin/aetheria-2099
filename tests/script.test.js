@@ -160,3 +160,20 @@ describe('script — byRoute(동행별 장면)', () => {
     expect(openingBeat('ACT3_VIGIL_01').npc_response).toBeTruthy()
   })
 })
+
+describe('script — 루트를 고르기 전에 세 인물을 만나야 한다', () => {
+  it('분기 씬에서 렌·카엘·에코가 모두 목소리를 낸다', () => {
+    // 이게 없으면 얼굴도 모르는 둘 중에서 고르라는 꼴이 된다 —
+    // 게임 최대의 선택을 눈 감고 하게 만드는 설계 결함이었다.
+    const n = SCRIPT.ACT1_SKY_GLITCH_01.narration
+    for (const who of ['렌 —', '카엘 —', '에코 —']) {
+      expect(n, `${who} 대사가 분기 전에 없음`).toContain(who)
+    }
+  })
+  it('세 선택지가 각 세력의 Act2로 정확히 이어진다', () => {
+    const map = Object.fromEntries(SCRIPT.ACT1_SKY_GLITCH_01.choices.map((c) => [c.tone, c.next]))
+    expect(map.Deceptive).toBe('ACT2_REN_AUCTION_01')
+    expect(map.Honest).toBe('ACT2_KAEL_INTERROGATION_01')
+    expect(map.Aggressive).toBe('ACT2_ECHO_BROADCAST_01')
+  })
+})
