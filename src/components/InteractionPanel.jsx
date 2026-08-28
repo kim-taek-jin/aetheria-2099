@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch } from 'lucide-react'
 
 // 각 톤의 아이콘·색 + "판돈" 태그(위험/보상을 한눈에 — 선택에 무게를 준다).
@@ -16,6 +16,10 @@ const TONE_STYLE = {
 
 export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
   const [text, setText] = useState('')
+  // 한글 IME 조합 상태. keydown 시점엔 마지막 글자가 아직 조합 중이라
+  // Enter가 "조합 확정"으로 소비되고 전송이 무시된다(= Enter를 두 번 눌러야 함).
+  // 조합이 끝난 뒤인 keyup에서 보내야 한 번에 전송된다.
+  const composing = useRef(false)
 
   function submitFree() {
     const t = text.trim()
@@ -67,10 +71,16 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            // Ignore Enter while a Korean IME composition is in progress —
-            // that Enter is confirming the composition, not submitting.
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) submitFree()
+          onCompositionStart={() => {
+            composing.current = true
+          }}
+          onCompositionEnd={() => {
+            composing.current = false
+          }}
+          onKeyUp={(e) => {
+            // keydown이 아니라 keyup에서 보낸다 — 그 사이에 IME 조합이 끝나므로
+            // 한글도 Enter 한 번에 전송된다.
+            if (e.key === 'Enter' && !composing.current) submitFree()
           }}
           disabled={disabled}
           placeholder="자유 입력 // 제인의 대사를 직접 타이핑…"

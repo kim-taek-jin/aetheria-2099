@@ -101,7 +101,14 @@ export default function App() {
   const [audioOn, setAudioOn] = useState(false)
 
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
-  const [beat, setBeat] = useState(() => storage.loadBeat() || openingBeat('PROLOGUE_RAIN_01') || OPENING)
+  // 비트가 없을 때는 세이브가 있는 씬의 도입부를 쓴다.
+  // 프롤로그로 고정하면 진행 중인 세이브를 불러왔을 때 화면과 상태가 어긋난다.
+  const [beat, setBeat] = useState(() => {
+    const saved = storage.loadBeat()
+    if (saved) return saved
+    const node = storage.loadSave()?.currentNode || 'PROLOGUE_RAIN_01'
+    return openingBeat(node) || openingBeat('PROLOGUE_RAIN_01') || OPENING
+  })
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(null) // 로컬 생성 중 실시간 부분 텍스트
   const [showEnding, setShowEnding] = useState(false)

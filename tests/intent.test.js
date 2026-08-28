@@ -70,8 +70,14 @@ describe('answers — 물으면 답한다(플레이어가 중심이 되는 층)'
       expect(looksLikeQuestion(q), q).toBe(true)
     }
   })
+  it('물음표도 의문사도 없는 한국어 질문형을 놓치지 않는다', () => {
+    // 이걸 놓치면 질문이 행동으로 처리돼 장면이 넘어간다(= 물어봤는데 답이 없다).
+    for (const q of ['칩에 대해 설명해줘', '네 얘기 좀 해봐', '바깥 얘기 알려줘', '배달원 궁금해', '말해봐']) {
+      expect(looksLikeQuestion(q), q).toBe(true)
+    }
+  })
   it('행동 서술은 질문으로 보지 않는다', () => {
-    for (const a of ['칩을 주머니에 넣는다', '조용히 물러난다', '단말을 뽑는다']) {
+    for (const a of ['칩을 주머니에 넣는다', '조용히 물러난다', '단말을 뽑는다', '렌에게 칩을 건넨다', '골목을 벗어난다']) {
       expect(looksLikeQuestion(a), a).toBe(false)
     }
   })
