@@ -13,7 +13,10 @@ import EndingScreen from './components/EndingScreen.jsx'
 import FailureScreen from './components/FailureScreen.jsx'
 
 import { OPENING } from './game/lore.js'
-import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf } from './game/scenes.js'
+// 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
+// 글이 좋아지고, 덤으로 대기가 0이 된다.
+import { hasScript, openingBeat, choiceBeat } from './game/script.js'
+import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import {
   createNewGame,
@@ -92,7 +95,7 @@ export default function App() {
   const [audioOn, setAudioOn] = useState(false)
 
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
-  const [beat, setBeat] = useState(() => storage.loadBeat() || OPENING)
+  const [beat, setBeat] = useState(() => storage.loadBeat() || openingBeat('PROLOGUE_RAIN_01') || OPENING)
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(null) // 로컬 생성 중 실시간 부분 텍스트
   const [showEnding, setShowEnding] = useState(false)
@@ -180,7 +183,7 @@ export default function App() {
 
   // 루트 분기 노드에서는 authoring 된 선택지를 쓴다(모델 생성분 대신).
   // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
-  const shownChoices = routeChoicesOf(save.currentNode) || beat?.generated_choices || []
+  const shownChoices = endingChoicesFor(save) || routeChoicesOf(save.currentNode) || beat?.generated_choices || []
 
   // 선생성: 비트가 확정되면 플레이어가 읽는 동안 선택지 3개의 다음 턴을 미리 만든다.
   // 로컬 모델일 때만 — 클라우드에서 3배로 호출하면 사용자의 유료 쿼터를 3배로 태운다.
@@ -189,7 +192,14 @@ export default function App() {
     const pf = prefetchRef.current
     const choices = shownChoices
     const canPrefetch =
-      usingLocal && !loading && !offlineMode && !save.endingReached && !save.failed && Array.isArray(choices) && choices.length > 0
+      usingLocal &&
+      !loading &&
+      !offlineMode &&
+      !hasScript(save.currentNode) && // 손으로 쓴 씬은 생성이 필요 없다
+      !save.endingReached &&
+      !save.failed &&
+      Array.isArray(choices) &&
+      choices.length > 0
     if (!canPrefetch) {
       pf.reset()
       return
@@ -260,6 +270,17 @@ export default function App() {
     // onPartial: 로컬 생성 중 부분 텍스트를 받아 화면에 흘려보낸다(대기 체감↓).
     // 선생성 캐시 히트면 생성 없이 즉시 진행(대기 0초). 선택지 클릭에만 해당하고,
     // 자유 입력·증거 제시는 내용을 미리 알 수 없어 항상 새로 만든다.
+    // 손으로 쓴 씬의 선택지라면 모델을 부르지 않는다 — 즉시, 그리고 잘 쓰인 글로.
+    const scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput) : null
+    if (scripted) {
+      prefetchRef.current.reset()
+      setStreaming(null)
+      setFellBack(false)
+      applyBeat(scripted, playerInput, meta)
+      setLoading(false)
+      return
+    }
+
     // 이 턴이 시작되면 상태가 곧 바뀌므로 선생성은 어느 쪽이든 정리한다.
     // (선택지면 고른 것만 남기고 나머지 취소, 자유 입력·증거면 전부 취소 —
     //  안 그러면 남은 선생성이 GPU를 두고 이번 생성과 경쟁해 더 느려진다.)
@@ -410,7 +431,7 @@ export default function App() {
   function startNewRun() {
     const fresh = withStamp(createNewGame())
     setSave(fresh)
-    setBeat(OPENING)
+    setBeat(openingBeat('PROLOGUE_RAIN_01') || OPENING)
     storage.writeBeat(null) // 새 게임 — 저장된 비트 제거
     setShowEnding(false)
     setDemoIndex(-1)

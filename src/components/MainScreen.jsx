@@ -53,11 +53,17 @@ export default function MainScreen({ beat, glitch, loading, streaming }) {
         </div>
       )}
 
-      {/* Narration — situational, no speaker. Dimmer + italic + left rule. */}
+      {/* Narration — situational, no speaker. Dimmer + italic + left rule.
+          손으로 쓴 씬은 [내 선택의 결과] → [상대의 반응] → [다음 상황]을 한 beat에
+          담으므로, 빈 줄(\n\n)을 실제 문단으로 끊어줘야 벽처럼 뭉치지 않는다. */}
       {narration && (
-        <p className="mb-4 border-l-2 border-cyan-500/30 pl-3 text-[13px] italic leading-relaxed text-cyan-300/70">
-          {narration}
-        </p>
+        <div className="mb-4 space-y-2 border-l-2 border-cyan-500/30 pl-3 text-[13px] italic leading-relaxed text-cyan-300/70">
+          {String(narration)
+            .split(/\n{2,}/)
+            .map((para, i) => (
+              <p key={i}>{para.trim()}</p>
+            ))}
+        </div>
       )}
 
       {/* Dialogue — only when someone actually speaks. */}
