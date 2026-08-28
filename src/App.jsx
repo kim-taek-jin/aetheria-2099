@@ -16,7 +16,7 @@ import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
 import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, SCRIPT } from './game/script.js'
-import { resolveIntent, resolveTopic, answerWithModel, answerPassesGate } from './services/intent.js'
+import { resolveIntent, resolveTopic, answerWithModelGated } from './services/intent.js'
 import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
@@ -295,32 +295,40 @@ export default function App() {
       const choices = SCRIPT[save.currentNode].choices
       const asking = looksLikeQuestion(playerInput)
 
+      const sc = SCENES[save.currentNode]
+      const askModel = (isAction) =>
+        usingLocal
+          ? answerWithModelGated(
+              {
+                npc: SCRIPT[save.currentNode].npc,
+                voice: sc?.npcVoice,
+                setting: sc?.setting,
+                question: playerInput,
+                isAction,
+                signal: sig,
+              },
+              hasGarble
+            )
+          : Promise.resolve(null)
+
       if (asking) {
+        // 확신 있는 주제만 손으로 쓴 답을 쓴다. 애매하면 모델에게 맡긴다 —
+        // 어설프게 들어맞는 정답지보다 질문에 실제로 반응하는 쪽이 낫다.
         const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
-        // 손으로 쓴 주제가 있으면 그것을 쓴다(품질 보장).
-        // 없으면 자체 모델이 답해보되, 품질 게이트를 통과한 것만 화면에 낸다.
-        // 통과 못 하면 인물다운 회피(DEFLECT)로 떨어진다 — 깨진 문장은 절대 안 나간다.
-        let line = null
-        if (!topic && usingLocal) {
-          const sc = SCENES[save.currentNode]
-          const raw = await answerWithModel({
-            npc: SCRIPT[save.currentNode].npc,
-            voice: sc?.npcVoice,
-            setting: sc?.setting,
-            question: playerInput,
-            signal: sig,
-          })
-          if (answerPassesGate(raw, hasGarble)) line = raw
-        }
+        const line = topic ? null : await askModel(false)
         scripted = askBeat(save.currentNode, topic, save.route, line, playerInput)
       } else {
         const idx = await resolveIntent({ text: playerInput, choices, signal: sig })
         if (idx >= 0 && idx < choices.length) {
           scripted = choiceBeat(save.currentNode, choices[idx].text, save.route)
         } else {
-          // 행동으로도 안 잡히면 질문일 수 있다 — 한 번 더 본다.
+          // 예상 못한 행동. 확신 있는 주제면 그 답을, 아니면 모델이 반응한다.
           const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
-          scripted = topic ? askBeat(save.currentNode, topic, save.route, null, playerInput) : nudgeBeat(save.currentNode, save.route)
+          const line = topic ? null : await askModel(true)
+          scripted =
+            topic || line
+              ? askBeat(save.currentNode, topic, save.route, line, playerInput)
+              : nudgeBeat(save.currentNode, save.route)
         }
       }
     }

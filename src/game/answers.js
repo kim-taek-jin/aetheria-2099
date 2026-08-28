@@ -15,7 +15,7 @@
 
 // 주제 판별용 키워드(모델 없이도 동작하는 1차 신호).
 export const TOPIC_KEYWORDS = {
-  chip: ['칩', '#00', '이 물건', '데이터', '그거'],
+  chip: ['칩이', '칩을', '칩은', '칩도', '이 칩', '그 칩', '#00', '이 물건', '데이터'],
   outside: ['바깥', '밖', '하늘', '초록', '숲', '정화', '장벽', '외부'],
   nexus: ['넥서스', 'nexus', '시스템', '인공지능', 'ai', '리엔'],
   self: ['당신', '너는', '넌 누구', '정체', '왜 그래', '왜 이런'],
@@ -374,21 +374,30 @@ export function looksLikeQuestion(text) {
   return ASK_MARKS.test(String(text || ''))
 }
 
-// 키워드로 주제를 고른다(모델 없이 동작하는 1차 신호).
-export function topicByKeyword(text) {
+// 키워드로 주제를 고른다. 점수는 매칭된 키워드 길이의 합이다 —
+// 짧은 키워드가 긴 키워드를 이기지 못하게 하기 위함.
+export function topicMatch(text) {
   const t = String(text || '').toLowerCase()
   let best = null
   let bestScore = 0
   for (const [topic, words] of Object.entries(TOPIC_KEYWORDS)) {
-    // 길이로 가중한다 — 짧은 키워드가 긴 키워드를 이기면 안 된다.
-    // ('시간 얼마나 남았어'가 '얼마'(price) 때문에 price로 가던 문제)
     const score = words.reduce((n, w) => n + (t.includes(w.toLowerCase()) ? w.length : 0), 0)
     if (score > bestScore) {
       bestScore = score
       best = topic
     }
   }
-  return best
+  return { topic: best, score: bestScore }
+}
+
+// 손으로 쓴 답변을 꺼내도 되는 "확신"의 문턱.
+// 이보다 약하면 캔 답변을 억지로 내놓는 대신 모델에게 맡긴다 — 어설프게
+// 들어맞는 정답지보다, 질문에 실제로 반응하는 쪽이 낫다.
+export const TOPIC_CONFIDENT = 2
+
+export function topicByKeyword(text) {
+  const { topic, score } = topicMatch(text)
+  return score >= TOPIC_CONFIDENT ? topic : null
 }
 
 export const TOPICS = Object.keys(TOPIC_KEYWORDS)

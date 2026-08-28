@@ -149,26 +149,52 @@ export async function resolveTopic({ text, topics, signal }) {
 // 과제가 예전과 다르다는 점이 중요하다. 모델은 이제 나레이션·선택지·JSON을
 // 만들지 않는다 — "이 인물의 목소리로 한두 문장" 하나만 하면 된다.
 const ANSWER_MIN = 8
-const ANSWER_MAX = 140
+const ANSWER_MAX = 110
+
+// 프롬프트 지시가 답변에 새어 나오는 패턴. 모델이 자기가 받은 명령을 그대로
+// 뱉는 일이 잦다("…짧게만 답해", "다시 묻지 마라", "설명하지 않는다").
+const INSTRUCTION_LEAK = /짧게|한 문장|한두 문장|답하라|답해라|설명하지|지어내지|따옴표|대사만|묻지 ?마라|모르면/
 
 // 화면에 내보내도 되는 답인가. 하나라도 걸리면 쓰지 않는다.
+// 구조적 결함만 잡을 수 있고 "말이 되는가"는 못 잡는다 — 그건 모델의 몫이다.
 export function answerPassesGate(text, hasGarbleFn) {
   const t = String(text || '').trim()
   if (t.length < ANSWER_MIN || t.length > ANSWER_MAX) return false
   if (/[{}\[\]"]|npc_|_change|story_branch/.test(t)) return false // JSON 누출
-  if (/\n/.test(t.trim())) return false // 여러 줄 = 대사가 아님
+  if (/(.)\1{3,}|[*#~`|]/.test(t)) return false // 같은 문자 반복·마크다운 기호(디코딩 붕괴 신호)
+  if (/\n/.test(t)) return false // 여러 줄 = 대사가 아님
+  if (INSTRUCTION_LEAK.test(t)) return false // 프롬프트 지시 누출
   if (hasGarbleFn && hasGarbleFn(t)) return false // 깨진 토큰·한자
+  // 문장 수 제한 — 세 문장을 넘으면 대사가 아니라 늘어놓기다.
+  const sentences = t.split(/[.!?…]+/).filter((x) => x.trim().length > 1)
+  if (sentences.length > 3) return false
   const hangul = (t.match(/[가-힣]/g) || []).length
-  return hangul / t.length >= 0.5
+  return hangul / t.length >= 0.55
 }
 
-export async function answerWithModel({ npc, voice, setting, question, signal, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+export async function answerWithModel({
+  npc,
+  voice,
+  setting,
+  question,
+  isAction = false,
+  temperature = 0.6,
+  signal,
+  url = OLLAMA_URL,
+  model = OLLAMA_MODEL,
+}) {
+  // 질문이면 "답하라", 행동이면 "반응하라" — 과제를 명확히 나눠야 헛소리가 준다.
+  const task = isAction
+    ? `플레이어(제인)가 방금 한 행동에 ${npc}가 보일 반응을 한국어 한 문장으로만 써라.`
+    : `플레이어(제인)의 질문에 ${npc}의 목소리로 한국어 한두 문장으로만 답하라.`
+  const label = isAction ? '제인의 행동' : '질문'
   const prompt = `너는 사이버펑크 게임 "Aetheria 2099"의 등장인물 ${npc}이다.
 ${voice ? `말투: ${voice}\n` : ''}${setting ? `지금 장면: ${setting}\n` : ''}
-플레이어(제인)의 질문에 ${npc}의 목소리로 한국어 한두 문장으로만 답하라.
-따옴표 없이 대사만 쓴다. 설명하지 않는다. 지어낸 설정을 늘어놓지 않는다.
+${task}
+따옴표 없이 대사만 쓴다. 설명하지 않는다. 새 설정을 지어내지 않는다.
+모르면 모른다고 짧게 말한다.
 
-질문: ${question}
+${label}: ${question}
 ${npc}:`
   try {
     const r = await fetch(`${url}/api/generate`, {
@@ -179,7 +205,13 @@ ${npc}:`
         model,
         prompt,
         stream: false,
-        options: { temperature: 0.6, top_p: 0.9, num_predict: 90, repeat_penalty: 1.15, stop: ['\n\n', '질문:'] },
+        options: {
+          temperature,
+          top_p: 0.9,
+          num_predict: 80,
+          repeat_penalty: 1.15,
+          stop: ['\n\n', '질문:', '제인의 행동:', '제인:'],
+        },
       }),
     })
     if (!r.ok) return null
@@ -187,4 +219,14 @@ ${npc}:`
   } catch {
     return null
   }
+}
+
+// 게이트를 통과할 때까지 최대 2번 시도한다(두 번째는 온도를 낮춰 노이즈를 줄인다).
+// 끝내 실패하면 null — 호출자가 인물다운 회피로 떨어진다. 깨진 문장은 안 나간다.
+export async function answerWithModelGated(opts, hasGarbleFn) {
+  for (const temperature of [0.6, 0.35]) {
+    const raw = await answerWithModel({ ...opts, temperature })
+    if (answerPassesGate(raw, hasGarbleFn)) return raw
+  }
+  return null
 }

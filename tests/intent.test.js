@@ -158,3 +158,21 @@ describe('answerPassesGate — 모델 답변은 통과한 것만 화면에 낸�
     expect(answerPassesGate('연기를 재면 2년이leanor 가까워졌거든', garble)).toBe(false)
   })
 })
+
+describe('answerPassesGate — 조인 게이트(모델 답변 검열)', () => {
+  it('프롬프트 지시 누출을 막는다', () => {
+    expect(answerPassesGate('값이 안 나와. 짧게만 답해.')).toBe(false)
+    expect(answerPassesGate('규정이다. 다시 묻지 마라')).toBe(false)
+  })
+  it('세 문장을 넘는 늘어놓기를 막는다', () => {
+    expect(answerPassesGate('하나다. 둘이다. 셋이다. 넷이다.')).toBe(false)
+  })
+  it('문자 반복·마크다운 기호를 막는다(디코딩 붕괴 신호)', () => {
+    expect(answerPassesGate('정하는 방식에 따라 잡******')).toBe(false)
+    expect(answerPassesGate('아아아아아 뭐라고 하는 거야')).toBe(false)
+  })
+  it('짧고 인물다운 한두 문장은 통과', () => {
+    expect(answerPassesGate('값을 못 매기는 물건이야. 그게 다야.')).toBe(true)
+    expect(answerPassesGate('규정은 규정이다. 더 묻지 않는 게 좋다.')).toBe(true)
+  })
+})
