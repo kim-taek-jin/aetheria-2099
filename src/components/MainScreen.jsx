@@ -17,20 +17,32 @@ export default function MainScreen({ beat, glitch, loading, streaming }) {
   const streamingLive = !!(streaming && (streaming.narration || streaming.npc_response))
   const full = beat?.npc_response || ''
 
+  // 대사가 나레이션과 동시에 타이핑되면, 나레이션을 읽는 사이에 대사가 이미
+  // 끝나 있다. 나레이션 분량에 비례해 대사 시작을 늦춰 "읽고 → 듣는" 순서를 만든다.
+  // (손으로 쓴 씬은 생성 대기가 0이라, 이 호흡을 안 주면 전부 한꺼번에 튀어나온다.)
+  const narrationLen = (beat?.narration || '').length
   useEffect(() => {
     if (streamingLive) return // 스트리밍 중엔 인터벌 타이핑을 쓰지 않음
     setShown('')
     if (!full) return
-    let i = 0
-    const id = setInterval(() => {
-      i += 2
-      setShown(full.slice(0, i))
-      if (i % 6 === 0) blip()
-      if (i >= full.length) clearInterval(id)
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }, 18)
-    return () => clearInterval(id)
-  }, [full, streamingLive])
+    let id = null
+    // 나레이션 한 글자당 6ms, 최소 0.35초 최대 2.2초.
+    const lead = Math.min(2200, Math.max(350, narrationLen * 6))
+    const startAt = setTimeout(() => {
+      let i = 0
+      id = setInterval(() => {
+        i += 2
+        setShown(full.slice(0, i))
+        if (i % 6 === 0) blip()
+        if (i >= full.length) clearInterval(id)
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      }, 18)
+    }, lead)
+    return () => {
+      clearTimeout(startAt)
+      if (id) clearInterval(id)
+    }
+  }, [full, streamingLive, narrationLen])
 
   // 스트리밍 중이면 부분 텍스트를, 아니면 확정 비트를 표시.
   const view = streamingLive ? streaming : beat
@@ -61,7 +73,10 @@ export default function MainScreen({ beat, glitch, loading, streaming }) {
           {String(narration)
             .split(/\n{2,}/)
             .map((para, i) => (
-              <p key={i}>{para.trim()}</p>
+              // 문단마다 조금씩 늦게 떠올라 눈이 따라갈 길을 만든다.
+              <p key={i} className="beat-para" style={{ animationDelay: `${i * 180}ms` }}>
+                {para.trim()}
+              </p>
             ))}
         </div>
       )}

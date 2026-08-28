@@ -86,6 +86,10 @@ const storage = {
   },
 }
 
+// 손으로 쓴 씬에서 선택 → 반영 사이의 의도적인 쉼(ms).
+// 0이면 클릭과 동시에 화면이 갈아치워져 선택의 무게가 느껴지지 않는다.
+const SCRIPT_BEAT_PAUSE_MS = 500
+
 export default function App() {
   const [apiKey, setApiKey] = useState('')
   const [showKeyModal, setShowKeyModal] = useState(false)
@@ -276,6 +280,9 @@ export default function App() {
       prefetchRef.current.reset()
       setStreaming(null)
       setFellBack(false)
+      // 한 박자 쉼. 즉시 갈아치우면 선택이 화면에 "튀어" 무게가 사라진다
+      // (모델 경로의 대기 시간이 우연히 해주던 일을, 여기서는 의도적으로 준다).
+      await new Promise((r) => setTimeout(r, SCRIPT_BEAT_PAUSE_MS))
       applyBeat(scripted, playerInput, meta)
       setLoading(false)
       return
