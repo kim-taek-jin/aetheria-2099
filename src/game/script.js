@@ -23,6 +23,8 @@
 //  조각 지급, 루트 확정, 엔딩 게이트 등 기존 시스템이 손대지 않고 그대로 돈다.
 // ============================================================
 
+import { answerBeat } from './answers.js'
+
 export const SCRIPT = {
   // ---------------- PROLOGUE ----------------
   PROLOGUE_RAIN_01: {
@@ -1190,6 +1192,21 @@ export function nudgeBeat(nodeId, route) {
     new_fragments: [],
     set_flags: [],
     evidence_result: 'none',
+    generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })),
+  }
+}
+
+// 플레이어의 질문에 지금 눈앞의 인물이 답하는 beat.
+// 씬을 진전시키지 않고 선택지도 그대로 둔다 — 대화는 장면을 소모하지 않는다.
+// (다만 추적 시계는 계속 돌기 때문에, 마냥 캐묻는 것도 공짜는 아니다.)
+export function askBeat(nodeId, topic, route) {
+  const raw = SCRIPT[nodeId]
+  if (!raw) return null
+  const s = viewOf(raw, route)
+  const b = answerBeat(s.npc, topic, s)
+  return {
+    ...b,
+    story_branch: nodeId,
     generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })),
   }
 }

@@ -101,7 +101,10 @@ export function applyResponse(save, res, playerInput) {
   // 증거가 빗나간 턴엔 바닥 보장을 걷는다 — 안 그러면 "실패해도 호감이 오르는"
   // 모순이 생겨 추리의 비용이 사라진다(플레이테스트에서 발견).
   const evidenceMissed = res.evidence_result === 'miss'
-  if (isFaction && !aggressive && !evidenceMissed) affApplied = Math.max(affApplied, AFFINITY_FLOOR)
+  // 질문/대화는 관계를 '쌓는' 행위가 아니다. 바닥 보장을 걸면 캐묻기만 해도
+  // 호감이 매번 올라 파밍이 된다(자유 질문 도입 중 발견).
+  const isTalk = res.conversation === true
+  if (isFaction && !aggressive && !evidenceMissed && !isTalk) affApplied = Math.max(affApplied, AFFINITY_FLOOR)
   if (evidenceMissed) affApplied = Math.min(affApplied, 0) // 빗나감은 이득이 될 수 없다
   rel.affinity = clamp(rel.affinity + affApplied, 0, 100)
 

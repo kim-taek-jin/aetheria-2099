@@ -13,6 +13,7 @@
 // ============================================================
 
 import { OLLAMA_URL, OLLAMA_MODEL } from './ollamaProvider.js'
+import { topicByKeyword } from '../game/answers.js'
 
 // 톤 라벨에 실제로 쓰이는 말들 — 모델이 없을 때의 폴백 규칙.
 const TONE_WORDS = {
@@ -94,4 +95,49 @@ export async function resolveIntent({ text, choices, signal }) {
   const byModel = await classifyIntent({ text, choices, signal })
   if (byModel !== null) return byModel
   return classifyByKeyword(text, choices)
+}
+
+// ---- 주제 분류(질문일 때) ----
+// 행동이 아니라 "무엇에 대해 묻는가"를 고른다. 답변 자체는 손으로 쓴 것을 쓴다.
+const TOPIC_LABEL = {
+  chip: '칩 #00이라는 물건에 대해',
+  outside: '장벽 바깥 / 진짜 하늘 / 정화된 외부에 대해',
+  nexus: 'NEXUS 또는 리엔이라는 존재에 대해',
+  self: '지금 대화 중인 상대 자신에 대해',
+  past: '제인의 지워진 3년과 정체에 대해',
+  courier: '죽은 배달원에 대해',
+  others: '다른 세력(렌·카엘·에코)에 대해',
+}
+
+export async function classifyTopic({ text, topics, signal, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+  const list = topics.map((t, i) => `${i}: ${TOPIC_LABEL[t] || t}`).join('\n')
+  const prompt = `플레이어의 질문이 무엇에 대한 것인지 아래에서 하나 고른다.
+어느 것도 아니면 -1을 출력한다. 번호만 출력한다.
+
+${list}
+
+질문: ${text}
+번호:`
+  try {
+    const r = await fetch(`${url}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({ model, prompt, stream: false, options: { temperature: 0, num_predict: 5 } }),
+    })
+    if (!r.ok) return null
+    const m = (((await r.json())?.response || '').trim().match(/-?\d+/) || [])[0]
+    if (m === undefined) return null
+    const n = parseInt(m, 10)
+    return n >= 0 && n < topics.length ? topics[n] : null
+  } catch {
+    return null
+  }
+}
+
+// 키워드 우선(빠르고 확실), 없으면 모델에 물어본다.
+export async function resolveTopic({ text, topics, signal }) {
+  const byKeyword = topicByKeyword(text)
+  if (byKeyword) return byKeyword
+  return classifyTopic({ text, topics, signal })
 }

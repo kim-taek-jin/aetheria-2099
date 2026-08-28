@@ -254,3 +254,23 @@ describe('applyResponse — 세력 루트 기록', () => {
     expect(n.route).toBeNull()
   })
 })
+
+describe('applyResponse — 질문은 관계를 쌓지 않는다(파밍 방지)', () => {
+  it('대화 beat은 호감 바닥 보장을 받지 않는다', () => {
+    const s = createNewGame()
+    const before = s.relationships.Ren.affinity
+    const n = applyResponse(s, beat({ npc_name: 'Ren', conversation: true }), '이 칩이 뭔데?')
+    expect(n.relationships.Ren.affinity).toBe(before)
+  })
+  it('일반 행동은 여전히 바닥 보장을 받는다', () => {
+    const s = createNewGame()
+    const before = s.relationships.Ren.affinity
+    const n = applyResponse(s, beat({ npc_name: 'Ren' }), '협력한다')
+    expect(n.relationships.Ren.affinity).toBeGreaterThan(before)
+  })
+  it('질문에도 추적 시계는 계속 돈다(공짜가 아니다)', () => {
+    const s = createNewGame()
+    const n = applyResponse(s, beat({ npc_name: 'Ren', conversation: true }), '이 칩이 뭔데?')
+    expect(n.heat).toBe(3)
+  })
+})

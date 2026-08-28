@@ -15,8 +15,9 @@ import FailureScreen from './components/FailureScreen.jsx'
 import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
-import { hasScript, openingBeat, choiceBeat, nudgeBeat, SCRIPT } from './game/script.js'
-import { resolveIntent } from './services/intent.js'
+import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, SCRIPT } from './game/script.js'
+import { resolveIntent, resolveTopic } from './services/intent.js'
+import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import {
@@ -276,26 +277,40 @@ export default function App() {
     // 선생성 캐시 히트면 생성 없이 즉시 진행(대기 0초). 선택지 클릭에만 해당하고,
     // 자유 입력·증거 제시는 내용을 미리 알 수 없어 항상 새로 만든다.
     // 손으로 쓴 씬의 선택지라면 모델을 부르지 않는다 — 즉시, 그리고 잘 쓰인 글로.
-    // 자유 입력도 손으로 쓴 씬에서는 모델에게 문장을 짓게 하지 않는다.
-    // 대신 "무엇을 하려는가"만 분류시키고(소형 모델이 잘하는 일 — 실측 10/10),
-    // 화면에 나가는 글은 authoring 된 것을 쓴다. 이게 자유 입력 순간 품질이
-    // 무너지던 문제의 해법이다.
+    // 자유 입력을 두 갈래로 받는다 — 이게 "플레이어가 중심"이 되는 지점이다.
+    //   묻는 말 → 지금 눈앞의 인물이 자기 관점으로 답한다(씬은 그대로).
+    //   하는 말 → 그 의도에 해당하는 장면이 전개된다.
+    // 어느 쪽이든 화면에 나가는 글은 손으로 쓴 것이다. 모델은 "무엇을 묻는가/
+    // 무엇을 하려는가"를 고르는 일만 한다 — 7B가 실제로 잘하는 일.
     let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
     if (!scripted && meta.freeform && hasScript(save.currentNode)) {
+      const sig = abortRef.current.signal
       const choices = SCRIPT[save.currentNode].choices
-      const idx = await resolveIntent({ text: playerInput, choices, signal: abortRef.current.signal })
-      scripted =
-        idx >= 0 && idx < choices.length
-          ? choiceBeat(save.currentNode, choices[idx].text, save.route)
-          : nudgeBeat(save.currentNode, save.route)
+      const asking = looksLikeQuestion(playerInput)
+
+      if (asking) {
+        const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
+        // 주제를 못 찾아도 인물다운 회피로 답한다(answerBeat의 DEFLECT).
+        scripted = askBeat(save.currentNode, topic, save.route)
+      } else {
+        const idx = await resolveIntent({ text: playerInput, choices, signal: sig })
+        if (idx >= 0 && idx < choices.length) {
+          scripted = choiceBeat(save.currentNode, choices[idx].text, save.route)
+        } else {
+          // 행동으로도 안 잡히면 질문일 수 있다 — 한 번 더 본다.
+          const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
+          scripted = topic ? askBeat(save.currentNode, topic, save.route) : nudgeBeat(save.currentNode, save.route)
+        }
+      }
     }
+
+    // 손으로 쓴 결과가 나왔으면 모델을 부르지 않고 그대로 재생한다.
     if (scripted) {
       prefetchRef.current.reset()
       setStreaming(null)
       setFellBack(false)
-      // 한 박자 쉼. 즉시 갈아치우면 선택이 화면에 "튀어" 무게가 사라진다
-      // (모델 경로의 대기 시간이 우연히 해주던 일을, 여기서는 의도적으로 준다).
-      await new Promise((r) => setTimeout(r, SCRIPT_BEAT_PAUSE_MS))
+      // 한 박자 쉼(선택의 무게). 자유 입력은 분류에 이미 시간이 걸리므로 짧게.
+      await new Promise((r) => setTimeout(r, meta.fromChoice ? SCRIPT_BEAT_PAUSE_MS : 150))
       applyBeat(scripted, playerInput, meta)
       setLoading(false)
       return

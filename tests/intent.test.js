@@ -4,7 +4,8 @@
 // 모델 산문으로 흘러가 품질이 깨진다.
 import { describe, it, expect } from 'vitest'
 import { classifyByKeyword } from '../src/services/intent.js'
-import { SCRIPT, nudgeBeat } from '../src/game/script.js'
+import { SCRIPT, nudgeBeat, askBeat } from '../src/game/script.js'
+import { ANSWERS, DEFLECT, TOPICS, looksLikeQuestion, topicByKeyword } from '../src/game/answers.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
 
 const garage = SCRIPT.ACT1_REN_GARAGE_01.choices // [솔직, 거짓말, 도발]
@@ -60,5 +61,46 @@ describe('nudgeBeat — 해당 없는 입력의 반응도 손으로 쓴다', () 
   })
   it('authoring 되지 않은 노드는 null', () => {
     expect(nudgeBeat('ENDING_SOLO_EXIT')).toBeNull()
+  })
+})
+
+describe('answers — 물으면 답한다(플레이어가 중심이 되는 층)', () => {
+  it('질문형 입력을 알아본다', () => {
+    for (const q of ['칩이 뭐야?', '너는 누구지', '왜 그렇게 생각해', '바깥에 뭐가 있어']) {
+      expect(looksLikeQuestion(q), q).toBe(true)
+    }
+  })
+  it('행동 서술은 질문으로 보지 않는다', () => {
+    for (const a of ['칩을 주머니에 넣는다', '조용히 물러난다', '단말을 뽑는다']) {
+      expect(looksLikeQuestion(a), a).toBe(false)
+    }
+  })
+  it('키워드로 주제를 고른다', () => {
+    expect(topicByKeyword('이 칩이 뭔데?')).toBe('chip')
+    expect(topicByKeyword('장벽 바깥에 진짜 숲이 있어?')).toBe('outside')
+    expect(topicByKeyword('내 지워진 3년은 뭐야')).toBe('past')
+    expect(topicByKeyword('그 배달원은 누구였어')).toBe('courier')
+  })
+  it('같은 주제라도 인물마다 다르게 답한다', () => {
+    const lines = ['Ren', 'Kael', 'Echo', 'NEXUS'].map((n) => ANSWERS[n].outside.line)
+    expect(new Set(lines).size).toBe(4)
+  })
+  it('네 화자가 모든 주제에 답을 가진다(빈 구멍 없음)', () => {
+    for (const npc of ['Ren', 'Kael', 'Echo', 'NEXUS']) {
+      for (const t of TOPICS) {
+        expect(ANSWERS[npc][t]?.line, `${npc}/${t} 누락`).toBeTruthy()
+      }
+    }
+  })
+  it('답변 beat은 씬을 진전시키지도 게이지를 건드리지도 않는다', () => {
+    const b = askBeat('ACT1_REN_GARAGE_01', 'chip')
+    expect(b.story_branch).toBe('ACT1_REN_GARAGE_01')
+    expect(b.suspicion_change).toBe(0)
+    expect(b.affinity_change).toBe(0)
+    expect(b.generated_choices).toHaveLength(3)
+  })
+  it('주제를 못 찾아도 인물다운 회피로 답한다', () => {
+    const b = askBeat('ACT1_REN_GARAGE_01', 'nonexistent_topic')
+    expect(b.npc_response).toBe(DEFLECT.Ren)
   })
 })
