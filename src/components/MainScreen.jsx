@@ -12,7 +12,7 @@ const NPC_COLOR = {
 // 중앙값 274자라 대사까지 합쳐 한 턴에 6초 가까이 "글자 나오는 걸 보는" 시간이
 // 생긴다. 그래서 (a) 대사보다 빠른 속도로 치고 (b) 화면을 클릭하면 즉시 전부
 // 드러나게 해, 빨리 읽는 사람이 손해 보지 않도록 했다.
-const TYPE_NARRATION = true
+const TYPE_NARRATION = false
 const NARRATION_MS_PER_STEP = 16 // 한 스텝(3자)당 — 약 5.3ms/자
 const NARRATION_CHARS_PER_STEP = 3
 
