@@ -1144,3 +1144,52 @@ export function choiceBeat(nodeId, choiceText, route) {
     generated_choices: (nextScene || s).choices.map((x) => ({ text: x.text, tone: x.tone })),
   }
 }
+
+// 자유 입력이 어느 선택지와도 맞지 않을 때의 반응(손으로 씀).
+// 모델에게 문장을 짓게 하면 그 순간 품질이 무너지므로, 여기서도 사람이 쓴다.
+// 씬을 진전시키지 않고 제자리에 머문다 — "지금 그건 중요하지 않다"는 신호.
+const NUDGE = {
+  NEXUS: {
+    narration: '제인의 손끝이 허공에서 멈춘다. 지금 이 자리에서 할 수 있는 일이 아니다.',
+    line: '시민 제인. 무의미한 동작이 기록되었습니다. 선택지를 벗어나지 마십시오.',
+    emotion: 'Suspicious',
+  },
+  Ren: {
+    narration: '렌이 하던 일을 멈추고 제인을 본다. 그리고 다시 단말로 눈을 돌린다.',
+    line: '…그건 값이 안 나와, 제인. 지금 할 얘기부터 하자.',
+    emotion: 'Neutral',
+  },
+  Kael: {
+    narration: '카엘은 대답하지 않는다. 형광등만 일정한 소리로 운다.',
+    line: '질문에 답해라, 브로커. 시간은 네 편이 아니다.',
+    emotion: 'Suspicious',
+  },
+  Echo: {
+    narration: '에코가 눈썹을 올린다. 그녀의 손은 여전히 콘솔 위에 있다.',
+    line: '지금? 그건 나중에 해. 여기선 정할 게 하나뿐이야.',
+    emotion: 'Threatening',
+  },
+}
+
+// 어느 선택지와도 맞지 않는 자유 입력에 대한 beat. 씬은 그대로 유지된다.
+export function nudgeBeat(nodeId, route) {
+  const raw = SCRIPT[nodeId]
+  if (!raw) return null
+  const s = viewOf(raw, route)
+  const n = NUDGE[s.npc] || NUDGE.NEXUS
+  return {
+    narration: n.narration,
+    npc_name: s.npc,
+    npc_response: n.line,
+    npc_emotion: n.emotion,
+    suspicion_change: 0,
+    affinity_change: 0,
+    heat_change: 0,
+    story_branch: nodeId, // 제자리
+    background_tone: s.tone || 'Normal',
+    new_fragments: [],
+    set_flags: [],
+    evidence_result: 'none',
+    generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })),
+  }
+}

@@ -15,7 +15,8 @@ import FailureScreen from './components/FailureScreen.jsx'
 import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
-import { hasScript, openingBeat, choiceBeat } from './game/script.js'
+import { hasScript, openingBeat, choiceBeat, nudgeBeat, SCRIPT } from './game/script.js'
+import { resolveIntent } from './services/intent.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import {
@@ -275,7 +276,19 @@ export default function App() {
     // 선생성 캐시 히트면 생성 없이 즉시 진행(대기 0초). 선택지 클릭에만 해당하고,
     // 자유 입력·증거 제시는 내용을 미리 알 수 없어 항상 새로 만든다.
     // 손으로 쓴 씬의 선택지라면 모델을 부르지 않는다 — 즉시, 그리고 잘 쓰인 글로.
-    const scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
+    // 자유 입력도 손으로 쓴 씬에서는 모델에게 문장을 짓게 하지 않는다.
+    // 대신 "무엇을 하려는가"만 분류시키고(소형 모델이 잘하는 일 — 실측 10/10),
+    // 화면에 나가는 글은 authoring 된 것을 쓴다. 이게 자유 입력 순간 품질이
+    // 무너지던 문제의 해법이다.
+    let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
+    if (!scripted && meta.freeform && hasScript(save.currentNode)) {
+      const choices = SCRIPT[save.currentNode].choices
+      const idx = await resolveIntent({ text: playerInput, choices, signal: abortRef.current.signal })
+      scripted =
+        idx >= 0 && idx < choices.length
+          ? choiceBeat(save.currentNode, choices[idx].text, save.route)
+          : nudgeBeat(save.currentNode, save.route)
+    }
     if (scripted) {
       prefetchRef.current.reset()
       setStreaming(null)
