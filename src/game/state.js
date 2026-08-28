@@ -62,6 +62,10 @@ export function createNewGame() {
     // 레일 위의 창발: 플레이어가 자유 입력으로 확립한 사실(최근 것들). 소형 모델이
     // set_flags를 잘 안 내므로 클라이언트가 기록해 이후 프롬프트에 canon으로 주입한다.
     playerCanon: [],
+    // Act2에서 플레이어가 실제로 택한 세력 루트('Ren'|'Kael'|'Echo').
+    // 세력 엔딩의 게이트다 — "최고 호감"으로 가르면 모든 경로가 강제로 거치는
+    // 렌이 Act1에서 벌어둔 호감 때문에, 다른 루트를 골라도 렌 엔딩이 나온다.
+    route: null,
     endingReached: null,
     failed: null, // { npc, reason } when a run collapses (arrest / route lost)
   }
@@ -153,6 +157,13 @@ export function applyResponse(save, res, playerInput) {
     if (typeof earned === 'string' && earned.trim() && !next.fragments.includes(earned.trim())) {
       next.fragments.push(earned.trim())
     }
+    // 세력 루트 확정: Act2의 세력 씬에 처음 들어서는 순간 기록한다.
+    // 이후 세력 엔딩은 호감 크기가 아니라 "네가 누구 편에 섰는가"로 갈린다.
+    const arrivingNpc = SCENES[nextNode]?.npc
+    if (!next.route && nextNode.startsWith('ACT2_') && ['Ren', 'Kael', 'Echo'].includes(arrivingNpc)) {
+      next.route = arrivingNpc
+    }
+
     // '빈자리' 조각은 반대로 **진입 시** 지급한다. #4가 엔딩 선택 노드에 있어서,
     // 떠날 때 주면 엔딩 자격 판정(eligibleEndings)이 이미 끝난 뒤라 진엔딩이
     // 영원히 열리지 않는다.

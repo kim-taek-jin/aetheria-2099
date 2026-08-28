@@ -713,6 +713,16 @@ export function isEnding(nodeId) {
 // The engine passes this list to the AI, which then picks ONE from it based on
 // the player's final choice — so systems (affinity, suspicion, trace, flags,
 // fragments) concretely decide which finales are on the table.
+// 세력 루트 → 그 세력의 결말.
+const ROUTE_ENDING = {
+  Ren: 'ENDING_REN_MONOPOLY',
+  Kael: 'ENDING_KAEL_SILENCE',
+  Echo: 'ENDING_ECHO_BREAKOUT',
+}
+// 동맹으로 인정되는 최소 호감. 호감 바닥 보장(+6/턴) 탓에 20 미만은 사실상
+// 불가능했다(10판 최소 20) → 25로 둬야 '홀로 걷는 길'이 실제로 열린다.
+const ALLY_MIN = 25
+
 export function eligibleEndings(save) {
   const rel = save.relationships || {}
   const A = (n) => rel[n]?.affinity ?? 0
@@ -734,20 +744,20 @@ export function eligibleEndings(save) {
   const out = []
   // Hidden trust-ending: everyone calm, broad trust, and you stayed off the grid.
   if (allCalm && broadTrust && heat < 50) out.push('ENDING_NEXUS_TRUST')
-  // Faction endings: only if you actually built an alliance.
-  // 호감 바닥 보장(+6/턴) 때문에 20 미만으로 끝나는 게 사실상 불가능했다
-  // (10판 최소값 20) → 홀로 걷는 길이 죽어 있었다. 25로 올려 실제로 열어둔다.
-  if (maxA >= 25) {
-    if (top === 'Ren') out.push('ENDING_REN_MONOPOLY')
-    if (top === 'Kael') out.push('ENDING_KAEL_SILENCE')
-    if (top === 'Echo') out.push('ENDING_ECHO_BREAKOUT')
-  }
+  // 세력 엔딩의 게이트는 **호감 크기가 아니라 플레이어가 선 편(route)**이다.
+  // 최고 호감으로 가르면, 모든 경로가 강제로 거치는 렌이 Act1에서 벌어둔
+  // 호감 때문에 다른 루트를 골라도 렌 엔딩이 나왔다(플레이테스트 5판 중 4판).
+  // route가 없는 옛 세이브는 기존 방식(최고 호감)으로 폴백한다.
+  const route = save.route || (maxA >= ALLY_MIN ? top : null)
+  const routeAff = route ? A(route) : 0
+  // 편에 서는 것만으로는 부족하다 — 그 세력과 실제로 관계를 쌓아야 한다.
+  if (route && routeAff >= ALLY_MIN) out.push(ROUTE_ENDING[route])
   // 개인 진엔딩은 목록 뒤에 둔다. 앞에 두면 모델이 결말을 못 고를 때의 강제
   // 폴백(elig[0])이 항상 진엔딩이 되어 세력 엔딩을 전부 밀어낸다(v8에서 5판 중 3판).
   // 이제 결말은 플레이어가 고르고, 이 순서는 폴백 안전망일 뿐이다.
   if (gapCount >= 4) out.push('ENDING_JAYNE_ORIGIN')
-  // Lone-wolf ending: no strong ally.
-  if (maxA < 25) out.push('ENDING_SOLO_EXIT')
+  // 홀로 걷는 길: 어느 편에도 서지 않았거나, 섰어도 관계를 쌓지 못했을 때.
+  if (!route || routeAff < ALLY_MIN) out.push('ENDING_SOLO_EXIT')
   // Safety net — never leave the finale with nowhere to go.
   if (out.length === 0) out.push('ENDING_SOLO_EXIT')
   return [...new Set(out)]

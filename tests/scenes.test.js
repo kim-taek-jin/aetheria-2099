@@ -234,3 +234,36 @@ describe('endingChoicesFor — 결말은 플레이어가 고른다', () => {
     expect(endingChoicesFor({ currentNode: 'PROLOGUE_RAIN_01', relationships: {}, fragments: [] })).toBeNull()
   })
 })
+
+describe('세력 엔딩 게이트 — 호감 크기가 아니라 "선 편(route)"', () => {
+  const mk = (route, r, k, e, heat = 20, fragments = []) => ({
+    route,
+    currentNode: 'ACT3_DESIGNER_CONFRONT_01',
+    relationships: {
+      Ren: { affinity: r, suspicion: 10 },
+      Kael: { affinity: k, suspicion: 10 },
+      Echo: { affinity: e, suspicion: 10 },
+    },
+    heat,
+    fragments,
+  })
+  it('렌 호감이 더 높아도 카엘 루트면 카엘 엔딩', () => {
+    // Act1이 렌을 강제로 거치게 하므로 이 상황이 흔하다 — 예전엔 렌 엔딩이 나왔다.
+    expect(eligibleEndings(mk('Kael', 58, 35, 5))).toContain('ENDING_KAEL_SILENCE')
+    expect(eligibleEndings(mk('Kael', 58, 35, 5))).not.toContain('ENDING_REN_MONOPOLY')
+  })
+  it('편에 섰어도 관계를 못 쌓았으면 홀로 걷는 길', () => {
+    expect(eligibleEndings(mk('Echo', 58, 5, 10))).toEqual(['ENDING_SOLO_EXIT'])
+  })
+  it('루트를 고른 적 없으면 홀로 걷는 길', () => {
+    expect(eligibleEndings(mk(null, 5, 5, 5))).toContain('ENDING_SOLO_EXIT')
+  })
+  it('route가 없는 옛 세이브는 최고 호감으로 폴백한다', () => {
+    expect(eligibleEndings(mk(null, 58, 5, 5))).toContain('ENDING_REN_MONOPOLY')
+  })
+  it('세 루트가 각자의 결말로 이어진다', () => {
+    expect(eligibleEndings(mk('Ren', 40, 5, 5))).toContain('ENDING_REN_MONOPOLY')
+    expect(eligibleEndings(mk('Kael', 5, 40, 5))).toContain('ENDING_KAEL_SILENCE')
+    expect(eligibleEndings(mk('Echo', 5, 5, 40))).toContain('ENDING_ECHO_BREAKOUT')
+  })
+})

@@ -235,3 +235,22 @@ describe('applyResponse — 조각 획득 보장(모델에 맡기지 않는다)'
     expect(again.fragments.length).toBe(once.fragments.length)
   })
 })
+
+describe('applyResponse — 세력 루트 기록', () => {
+  it('Act2 세력 씬에 진입하면 루트가 확정된다', () => {
+    const s = createNewGame()
+    const n = applyResponse(s, beat({ story_branch: 'ACT2_KAEL_INTERROGATION_01' }), 'x')
+    expect(n.route).toBe('Kael')
+  })
+  it('한 번 정해진 루트는 이후 다른 세력 씬에서도 바뀌지 않는다', () => {
+    const s = createNewGame()
+    const a = applyResponse(s, beat({ story_branch: 'ACT2_ECHO_BROADCAST_01' }), 'x')
+    const b = applyResponse(a, beat({ story_branch: 'ACT2_REN_AUCTION_01' }), 'x')
+    expect(b.route).toBe('Echo')
+  })
+  it('Act1까지는 루트가 없다(렌 정비소를 강제로 거쳐도)', () => {
+    const s = createNewGame()
+    const n = applyResponse(s, beat({ story_branch: 'ACT1_REN_GARAGE_01' }), 'x')
+    expect(n.route).toBeNull()
+  })
+})
