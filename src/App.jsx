@@ -16,7 +16,7 @@ import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
 import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, SCRIPT } from './game/script.js'
-import { resolveIntent, resolveTopic } from './services/intent.js'
+import { resolveIntent, resolveTopic, answerWithModel, answerPassesGate } from './services/intent.js'
 import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
@@ -29,7 +29,7 @@ import {
   API_KEY_STORAGE,
 } from './game/state.js'
 import { GATES } from './game/state.js'
-import { generateBeat, emergencyBeat } from './services/geminiService.js'
+import { generateBeat, emergencyBeat, hasGarble } from './services/geminiService.js'
 // 자체 파인튜닝 모델(로컬 Ollama). Gemini와 동일 시그니처/반환형이라 배선만 하면 됨.
 import { generateBeat as generateBeatLocal, isAvailable as ollamaIsAvailable } from './services/ollamaProvider.js'
 import { routeBeat } from './services/aiRouter.js'
@@ -297,8 +297,22 @@ export default function App() {
 
       if (asking) {
         const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
-        // 주제를 못 찾아도 인물다운 회피로 답한다(answerBeat의 DEFLECT).
-        scripted = askBeat(save.currentNode, topic, save.route)
+        // 손으로 쓴 주제가 있으면 그것을 쓴다(품질 보장).
+        // 없으면 자체 모델이 답해보되, 품질 게이트를 통과한 것만 화면에 낸다.
+        // 통과 못 하면 인물다운 회피(DEFLECT)로 떨어진다 — 깨진 문장은 절대 안 나간다.
+        let line = null
+        if (!topic && usingLocal) {
+          const sc = SCENES[save.currentNode]
+          const raw = await answerWithModel({
+            npc: SCRIPT[save.currentNode].npc,
+            voice: sc?.npcVoice,
+            setting: sc?.setting,
+            question: playerInput,
+            signal: sig,
+          })
+          if (answerPassesGate(raw, hasGarble)) line = raw
+        }
+        scripted = askBeat(save.currentNode, topic, save.route, line)
       } else {
         const idx = await resolveIntent({ text: playerInput, choices, signal: sig })
         if (idx >= 0 && idx < choices.length) {

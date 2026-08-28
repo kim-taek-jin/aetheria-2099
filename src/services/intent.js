@@ -141,3 +141,50 @@ export async function resolveTopic({ text, topics, signal }) {
   if (byKeyword) return byKeyword
   return classifyTopic({ text, topics, signal })
 }
+
+// ---- 모델이 직접 답하기(authoring 주제 밖의 질문) ----
+// 손으로 쓴 답변은 7개 주제만 덮는다. 그 밖을 물으면 지금까지는 인물다운
+// 회피만 나왔다. 여기서 자체 모델이 답하되, 품질 게이트를 통과한 것만 쓴다.
+//
+// 과제가 예전과 다르다는 점이 중요하다. 모델은 이제 나레이션·선택지·JSON을
+// 만들지 않는다 — "이 인물의 목소리로 한두 문장" 하나만 하면 된다.
+const ANSWER_MIN = 8
+const ANSWER_MAX = 140
+
+// 화면에 내보내도 되는 답인가. 하나라도 걸리면 쓰지 않는다.
+export function answerPassesGate(text, hasGarbleFn) {
+  const t = String(text || '').trim()
+  if (t.length < ANSWER_MIN || t.length > ANSWER_MAX) return false
+  if (/[{}\[\]"]|npc_|_change|story_branch/.test(t)) return false // JSON 누출
+  if (/\n/.test(t.trim())) return false // 여러 줄 = 대사가 아님
+  if (hasGarbleFn && hasGarbleFn(t)) return false // 깨진 토큰·한자
+  const hangul = (t.match(/[가-힣]/g) || []).length
+  return hangul / t.length >= 0.5
+}
+
+export async function answerWithModel({ npc, voice, setting, question, signal, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+  const prompt = `너는 사이버펑크 게임 "Aetheria 2099"의 등장인물 ${npc}이다.
+${voice ? `말투: ${voice}\n` : ''}${setting ? `지금 장면: ${setting}\n` : ''}
+플레이어(제인)의 질문에 ${npc}의 목소리로 한국어 한두 문장으로만 답하라.
+따옴표 없이 대사만 쓴다. 설명하지 않는다. 지어낸 설정을 늘어놓지 않는다.
+
+질문: ${question}
+${npc}:`
+  try {
+    const r = await fetch(`${url}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        options: { temperature: 0.6, top_p: 0.9, num_predict: 90, repeat_penalty: 1.15, stop: ['\n\n', '질문:'] },
+      }),
+    })
+    if (!r.ok) return null
+    return (((await r.json())?.response || '').trim().split('\n')[0] || '').trim() || null
+  } catch {
+    return null
+  }
+}

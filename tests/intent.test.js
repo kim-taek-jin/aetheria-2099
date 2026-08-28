@@ -3,7 +3,7 @@
 // nudge(해당 없음) 경로를 검증한다. 이 둘이 무너지면 자유 입력이 다시
 // 모델 산문으로 흘러가 품질이 깨진다.
 import { describe, it, expect } from 'vitest'
-import { classifyByKeyword } from '../src/services/intent.js'
+import { classifyByKeyword, answerPassesGate } from '../src/services/intent.js'
 import { SCRIPT, nudgeBeat, askBeat } from '../src/game/script.js'
 import { ANSWERS, DEFLECT, TOPICS, looksLikeQuestion, topicByKeyword } from '../src/game/answers.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
@@ -108,5 +108,29 @@ describe('answers — 물으면 답한다(플레이어가 중심이 되는 층)'
   it('주제를 못 찾아도 인물다운 회피로 답한다', () => {
     const b = askBeat('ACT1_REN_GARAGE_01', 'nonexistent_topic')
     expect(b.npc_response).toBe(DEFLECT.Ren)
+  })
+})
+
+describe('answerPassesGate — 모델 답변은 통과한 것만 화면에 낸다', () => {
+  it('정상적인 한두 문장은 통과', () => {
+    expect(answerPassesGate('값을 못 매기는 물건이야. 그게 다야.')).toBe(true)
+  })
+  it('너무 짧거나 긴 것은 막는다', () => {
+    expect(answerPassesGate('응')).toBe(false)
+    expect(answerPassesGate('가'.repeat(200))).toBe(false)
+  })
+  it('JSON 누출을 막는다', () => {
+    expect(answerPassesGate('{"npc_response":"안녕하세요 시민 제인"}')).toBe(false)
+    expect(answerPassesGate('그래 알겠어 suspicion_change 를 올린다')).toBe(false)
+  })
+  it('여러 줄은 대사가 아니므로 막는다', () => {
+    expect(answerPassesGate('첫 줄이다\n둘째 줄이다')).toBe(false)
+  })
+  it('한글 비율이 낮으면 막는다', () => {
+    expect(answerPassesGate('leanor crypto Dollar signs okay then')).toBe(false)
+  })
+  it('깨짐 검출기를 함께 쓰면 라틴 덩어리를 막는다', () => {
+    const garble = (t) => /[A-Za-z]{4,}/.test(t)
+    expect(answerPassesGate('연기를 재면 2년이leanor 가까워졌거든', garble)).toBe(false)
   })
 })
