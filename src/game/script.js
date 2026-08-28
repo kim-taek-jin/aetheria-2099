@@ -1200,11 +1200,11 @@ export function nudgeBeat(nodeId, route) {
 // 씬을 진전시키지 않고 선택지도 그대로 둔다 — 대화는 장면을 소모하지 않는다.
 // (다만 추적 시계는 계속 돌기 때문에, 마냥 캐묻는 것도 공짜는 아니다.)
 // overrideLine: 자체 모델이 만든 답이 품질 게이트를 통과했을 때만 넘어온다.
-export function askBeat(nodeId, topic, route, overrideLine) {
+export function askBeat(nodeId, topic, route, overrideLine, seed = '') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
   const s = viewOf(raw, route)
-  const b = answerBeat(s.npc, topic, s)
+  const b = answerBeat(s.npc, topic, s, seed)
   return {
     ...b,
     ...(overrideLine ? { npc_response: overrideLine, narration: '' } : null),

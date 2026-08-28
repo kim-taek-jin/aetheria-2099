@@ -312,7 +312,7 @@ export default function App() {
           })
           if (answerPassesGate(raw, hasGarble)) line = raw
         }
-        scripted = askBeat(save.currentNode, topic, save.route, line)
+        scripted = askBeat(save.currentNode, topic, save.route, line, playerInput)
       } else {
         const idx = await resolveIntent({ text: playerInput, choices, signal: sig })
         if (idx >= 0 && idx < choices.length) {
@@ -320,7 +320,7 @@ export default function App() {
         } else {
           // 행동으로도 안 잡히면 질문일 수 있다 — 한 번 더 본다.
           const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig })
-          scripted = topic ? askBeat(save.currentNode, topic, save.route) : nudgeBeat(save.currentNode, save.route)
+          scripted = topic ? askBeat(save.currentNode, topic, save.route, null, playerInput) : nudgeBeat(save.currentNode, save.route)
         }
       }
     }

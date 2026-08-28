@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { classifyByKeyword, answerPassesGate } from '../src/services/intent.js'
 import { SCRIPT, nudgeBeat, askBeat } from '../src/game/script.js'
-import { ANSWERS, DEFLECT, TOPICS, looksLikeQuestion, topicByKeyword } from '../src/game/answers.js'
+import { ANSWERS, DEFLECT, TOPICS, looksLikeQuestion, topicByKeyword, pickDeflect } from '../src/game/answers.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
 
 const garage = SCRIPT.ACT1_REN_GARAGE_01.choices // [솔직, 거짓말, 도발]
@@ -107,7 +107,31 @@ describe('answers — 물으면 답한다(플레이어가 중심이 되는 층)'
   })
   it('주제를 못 찾아도 인물다운 회피로 답한다', () => {
     const b = askBeat('ACT1_REN_GARAGE_01', 'nonexistent_topic')
-    expect(b.npc_response).toBe(DEFLECT.Ren)
+    expect(DEFLECT.Ren).toContain(b.npc_response)
+  })
+  it('회피는 여러 개라 반복이 티나지 않는다', () => {
+    for (const npc of ['Ren', 'Kael', 'Echo', 'NEXUS']) {
+      expect(DEFLECT[npc].length).toBeGreaterThanOrEqual(3)
+      expect(new Set(DEFLECT[npc]).size).toBe(DEFLECT[npc].length)
+    }
+    const seeds = ['우주는 뭐야', '좋아하는 색은', '저녁 뭐 먹었어', '노래 불러줘', '고양이 있어']
+    expect(new Set(seeds.map((q) => pickDeflect('Ren', q))).size).toBeGreaterThan(1)
+  })
+  it('같은 질문에는 같은 회피(일관성)', () => {
+    expect(pickDeflect('Kael', '우주는 뭐야')).toBe(pickDeflect('Kael', '우주는 뭐야'))
+  })
+  it('주제가 20개로 늘었고 네 화자가 모두 답한다', () => {
+    expect(TOPICS.length).toBe(20)
+    for (const npc of ['Ren', 'Kael', 'Echo', 'NEXUS']) {
+      for (const t of TOPICS) expect(ANSWERS[npc][t]?.line, `${npc}/${t}`).toBeTruthy()
+    }
+  })
+  it('흥정·협상 질문이 올바른 주제로 간다', () => {
+    expect(topicByKeyword('이 데이터의 가격을 얼마라고 생각해')).toBe('price')
+    expect(topicByKeyword('얼마에 살껀데?')).toBe('price')
+    expect(topicByKeyword('지분은 얼마나 줄 건데')).toBe('deal')
+    expect(topicByKeyword('다른 사람한테 맡기면 안 돼?')).toBe('elsewhere')
+    expect(topicByKeyword('시간 얼마나 남았어')).toBe('time') // '얼마'가 price를 먹지 않는다
   })
 })
 
