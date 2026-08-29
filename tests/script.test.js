@@ -1,7 +1,7 @@
 // script.js — 손으로 쓴 서사. 모델 출력과 같은 형태여야 기존 시스템(추적 시계,
 // 조각 지급, 루트 확정, 엔딩 게이트)이 그대로 통과한다. 그 계약을 고정한다.
 import { describe, it, expect } from 'vitest'
-import { SCRIPT, hasScript, openingBeat, choiceBeat } from '../src/game/script.js'
+import { SCRIPT, hasScript, openingBeat, choiceBeat, evidenceScriptBeat } from '../src/game/script.js'
 import { SCENES } from '../src/game/scenes.js'
 import { NPCS, EMOTIONS, TONES, CHOICE_TONES } from '../src/game/lore.js'
 import { createNewGame, applyResponse } from '../src/game/state.js'
@@ -203,6 +203,25 @@ describe('script — 고르지 않은 세력도 무대에 오른다', () => {
         .map((c) => c.rivalEffects.affinity_change ?? 0)
       expect(Math.max(...deltas), `${node}`).toBeGreaterThan(0)
       expect(Math.min(...deltas), `${node}`).toBeLessThan(0)
+    }
+  })
+})
+
+describe('script — AI 없이도 완주된다(무료 웹 공개 조건)', () => {
+  it('엔딩을 제외한 모든 씬이 authoring 되어 있다', () => {
+    // App의 playable = hasScript(현재씬) || aiReady 이므로, 이 불변식이 곧
+    // "Ollama도 API 키도 없는 방문자가 처음부터 끝까지 플레이할 수 있다"는 뜻이다.
+    // 깨지면 방문자가 손으로 쓴 게임 대신 옛 데모를 보게 된다.
+    for (const id of Object.keys(SCENES).filter((k) => !k.startsWith('ENDING_'))) {
+      expect(hasScript(id), `${id} 미작성 → 그 씬에서 AI가 필요해진다`).toBe(true)
+    }
+  })
+  it('증거 제시도 손으로 쓴 반응을 가진다(AI 불필요)', () => {
+    for (const v of ['hit', 'miss']) {
+      const b = evidenceScriptBeat('ACT2_KAEL_HOLDING_01', v)
+      expect(b.npc_response.length).toBeGreaterThan(8)
+      expect(b.evidence_result).toBe(v)
+      expect(b.story_branch).toBe('ACT2_KAEL_HOLDING_01')
     }
   })
 })

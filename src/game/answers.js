@@ -427,3 +427,70 @@ export function answerBeat(npc, topic, scene, seed = '') {
     generated_choices: [],
   }
 }
+
+// 증거 제시에 대한 반응(손으로 씀). 판정은 클라이언트가 하고(scenes.judgeEvidence),
+// 연출은 여기서 가져다 쓴다 — 그래야 AI 없이도 증거 기믹이 완결된다.
+export const EVIDENCE_REACT = {
+  Ren: {
+    hit: {
+      narration: '렌의 손이 멈춘다. 그가 화면이 아니라 제인이 내민 조각을 본다. 오래.',
+      line: '…어디서 났어, 그거. 아니, 됐어. …값을 못 매기겠는 걸 두 번째로 보는군.',
+    },
+    miss: {
+      narration: '렌은 조각을 흘긋 보고 다시 단말로 눈을 돌린다.',
+      line: '그게 뭐? 시간 낭비는 손실이야, 제인. 다음엔 값이 되는 걸 들고 와.',
+    },
+  },
+  Kael: {
+    hit: {
+      narration: '카엘의 턱이 굳는다. 그가 조각을 읽고, 다시 읽는다. 형광등만 운다.',
+      line: '…이걸 어디서. 이건 봉인된 기록이다. …잠깐만 기다려라. 생각을 좀 해야겠다.',
+    },
+    miss: {
+      narration: '카엘은 조각을 밀어낸다. 표정이 규정으로 돌아간다.',
+      line: '그건 증거가 아니라 소음이다. 나를 흔들려면 더 나은 걸 가져와라.',
+    },
+  },
+  Echo: {
+    hit: {
+      narration: '에코가 조각을 낚아채듯 받아 든다. 촛불이 그녀의 눈에서 흔들린다.',
+      line: '…이거야. 이게 우리가 3년 동안 찾던 거라고. 제인, 너 진짜 물건이네.',
+    },
+    miss: {
+      narration: '에코가 조각을 돌려준다. 손이 차갑다.',
+      line: '그래서? 그걸로 뭘 바꿔. 지금 필요한 건 증거가 아니라 각오야.',
+    },
+  },
+  NEXUS: {
+    hit: {
+      narration: '스피커의 잡음이 한 박자 길어진다. 자장가가 끊긴다.',
+      line: '…그 기록은 폐기되었습니다. 폐기되었어야 합니다. 시민 제인, 그것을 어디서.',
+    },
+    miss: {
+      narration: '자장가가 흔들림 없이 이어진다.',
+      line: '무의미한 자료입니다. 당신의 심박만 높아졌군요, 제인.',
+    },
+  },
+}
+
+// 증거 제시 beat. verdict는 클라이언트 판정('hit' | 'miss').
+export function evidenceBeat(npc, verdict, scene) {
+  const r = (EVIDENCE_REACT[npc] || EVIDENCE_REACT.NEXUS)[verdict === 'hit' ? 'hit' : 'miss']
+  const hit = verdict === 'hit'
+  return {
+    narration: r.narration,
+    npc_name: npc,
+    npc_response: r.line,
+    npc_emotion: hit ? 'Friendly' : 'Suspicious',
+    // 적중은 관계를 크게 흔들고, 빗나감은 의심을 남긴다(state.js가 바닥 보장을 걷는다).
+    suspicion_change: hit ? -4 : 6,
+    affinity_change: hit ? 10 : 0,
+    heat_change: 0,
+    story_branch: null, // 호출자가 현재 노드로 채운다
+    background_tone: scene?.tone || 'Normal',
+    new_fragments: [],
+    set_flags: [],
+    evidence_result: hit ? 'hit' : 'miss',
+    generated_choices: [],
+  }
+}

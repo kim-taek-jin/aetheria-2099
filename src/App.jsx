@@ -15,7 +15,7 @@ import FailureScreen from './components/FailureScreen.jsx'
 import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
-import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, SCRIPT } from './game/script.js'
+import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, evidenceScriptBeat, SCRIPT } from './game/script.js'
 import { resolveIntent, resolveTopic, answerWithModelGated } from './services/intent.js'
 import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
@@ -157,7 +157,13 @@ export default function App() {
   const usingLocal = ollamaOn && (forceLocal || !apiKey) // 로컬 모델로 구동 중
   const localWanted = forceLocal && !ollamaOn // 로컬 전용인데 로컬이 없음(안내 필요)
   const aiReady = forceLocal ? ollamaOn : !!apiKey || ollamaOn
-  const offlineMode = !aiReady // AI 불가 → 스크립트 데모
+  // 본편은 전부 손으로 쓴 서사라 AI가 없어도 완주된다. 자유 입력의 의도·주제
+  // 판별도 모델이 없으면 키워드 규칙으로 떨어진다. 그래서 "AI 없음"이 곧
+  // "플레이 불가"가 아니다 — 이걸 구분하지 않으면 웹에 올렸을 때 방문자가
+  // 손으로 쓴 게임 대신 옛 데모를 보게 된다.
+  const scriptedHere = hasScript(save.currentNode)
+  const playable = scriptedHere || aiReady
+  const offlineMode = !playable // 손으로 쓴 씬도 없고 AI도 없을 때만 데모
 
   // First mount: load key. No key is fine — local model or offline demo covers it.
   useEffect(() => {
@@ -268,7 +274,7 @@ export default function App() {
 
   async function advance(playerInput, meta = {}) {
     if (loading) return
-    if (!aiReady) {
+    if (!playable) {
       // 로컬 전용인데 로컬이 없으면 키 모달은 도움이 안 됨(안내 배너로 유도).
       if (!forceLocal) setShowKeyModal(true)
       return
@@ -290,6 +296,9 @@ export default function App() {
     // 어느 쪽이든 화면에 나가는 글은 손으로 쓴 것이다. 모델은 "무엇을 묻는가/
     // 무엇을 하려는가"를 고르는 일만 한다 — 7B가 실제로 잘하는 일.
     let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
+    if (!scripted && meta.evidenceVerdict && hasScript(save.currentNode)) {
+      scripted = evidenceScriptBeat(save.currentNode, meta.evidenceVerdict, save.route)
+    }
     if (!scripted && meta.freeform && hasScript(save.currentNode)) {
       const sig = abortRef.current.signal
       const choices = SCRIPT[save.currentNode].choices
@@ -632,10 +641,10 @@ export default function App() {
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
         onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text, { fromChoice: true, forceBranch: c.branch }))}
-        onFreeText={(t) => (offlineMode ? setShowKeyModal(true) : advance(t, { freeform: true }))}
+        onFreeText={(t) => (playable ? advance(t, { freeform: true }) : setShowKeyModal(true))}
         onPresentEvidence={() => {
-          if (offlineMode) {
-            // Real evidence judging needs the AI. Nudge to add a key.
+          if (!playable) {
+            // 손으로 쓴 씬도 없고 AI도 없을 때만 키를 요구한다.
             setShowKeyModal(true)
             return
           }

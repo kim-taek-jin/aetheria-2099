@@ -23,7 +23,7 @@
 //  조각 지급, 루트 확정, 엔딩 게이트 등 기존 시스템이 손대지 않고 그대로 돈다.
 // ============================================================
 
-import { answerBeat } from './answers.js'
+import { answerBeat, evidenceBeat } from './answers.js'
 
 export const SCRIPT = {
   // ---------------- PROLOGUE ----------------
@@ -1247,4 +1247,13 @@ export function askBeat(nodeId, topic, route, overrideLine, seed = '') {
     story_branch: nodeId,
     generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })),
   }
+}
+
+// 증거 제시 beat(손으로 쓴 반응). AI 없이도 증거 기믹이 완결된다.
+export function evidenceScriptBeat(nodeId, verdict, route) {
+  const raw = SCRIPT[nodeId]
+  if (!raw) return null
+  const s = viewOf(raw, route)
+  const b = evidenceBeat(s.npc, verdict, s)
+  return { ...b, story_branch: nodeId, generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })) }
 }
