@@ -108,6 +108,16 @@ export function applyResponse(save, res, playerInput) {
   if (evidenceMissed) affApplied = Math.min(affApplied, 0) // 빗나감은 이득이 될 수 없다
   rel.affinity = clamp(rel.affinity + affApplied, 0, 100)
 
+  // 다른 세력에 대한 직접 효과. Act2는 루트가 배타적이라 고르지 않은 세력의
+  // 게이지가 장식으로 남는다 — 각 루트에 상대 세력이 개입하는 순간을 넣고,
+  // 그 응답이 실제로 상대 게이지를 움직이게 한다.
+  const rv = res.rival_effects
+  if (rv && rv.npc && next.relationships[rv.npc] && rv.npc !== npc) {
+    const r2 = next.relationships[rv.npc]
+    r2.affinity = clamp(r2.affinity + clamp(rv.affinity_change ?? 0, -20, 20), 0, 100)
+    r2.suspicion = clamp(r2.suspicion + clamp(rv.suspicion_change ?? 0, -20, 20), 0, 100)
+  }
+
   // Trade-off ripple: aggressive/deceptive beats nudge rivals.
   applyTradeoff(next, npc, res, playerInput)
 

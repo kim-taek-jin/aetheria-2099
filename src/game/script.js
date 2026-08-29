@@ -436,8 +436,11 @@ export const SCRIPT = {
     emotion: 'Neutral',
     narration:
       '소란이 가라앉은 뒷방. 낙찰 데이터가 벽 한 면을 강물처럼 흘러내린다. ' +
-      '렌이 처음으로 제인에게 의자를 권한다. 그리고 지분 계약서를 띄운다. 서명란이 비어 있다.',
-    line: '여기까지 왔으면 둘 중 하나야. 파트너, 아니면 미수금. 어느 쪽이 이문이 남을지는 네가 정해.',
+      '렌이 처음으로 제인에게 의자를 권한다. 그리고 지분 계약서를 띄운다. 서명란이 비어 있다.\n\n' +
+      '그때 제인의 낡은 단말이 혼자 켜진다. 암호화되지 않은 경비대 회선 — 누군가 일부러 열어둔 것이다. ' +
+      '카엘 — "경매 기록은 이미 내 책상 위에 있다, 브로커. 오늘 밤 안에 그 방에서 나오면 나는 못 본 걸로 한다. ' +
+      '서명하면… 그때부터 너는 공범이고, 나는 규정대로 간다."',
+    line: '…끊어. 저 사람 말은 공짜인 척하면서 제일 비싸. 서명은 네 손에 달렸어, 제인.',
     choices: [
       {
         text: '[솔직하게] 계약서에 서명한다.',
@@ -445,24 +448,28 @@ export const SCRIPT = {
         reaction: {
           narration:
             '제인이 서명하자 렌이 잔을 두 개 꺼낸다. 그가 술을 따르는 손이 아주 살짝 떨린다. ' +
-            '이 남자가 무언가를 나눠 갖는 건, 아마 아주 오랜만이다.',
+            '경비대 회선은 응답 없이 닫힌다. 저쪽에서 먼저 끊었다.',
           line: '…파트너. 이 단어 써본 지 6년 됐어. 마지막 파트너는 내가 팔았고. 이번엔 안 팔아볼게.',
           emotion: 'Friendly',
         },
         effects: { affinity: 10, suspicion: -3 },
+        rivalEffects: { npc: 'Kael', affinity_change: -6, suspicion_change: 14 },
         next: 'ACT2_REN_AUCTION_02',
       },
       {
-        text: '[조사] 서명 대신 그의 비밀 함을 묻는다.',
+        text: '[솔직하게] 카엘의 회선에 대답한다.',
         tone: 'Investigate',
         reaction: {
           narration:
-            '제인이 작업대 아래 잠긴 함을 가리킨다. 값이 매겨지지 않은 유일한 물건. ' +
-            '렌의 표정이 처음으로 계산에서 벗어난다. 그가 잔을 내려놓는다.',
-          line: '…그건 매물이 아니야. 그 안엔 팔 수 없는 게 하나 들어 있어. 묻지 마. 값을 못 매기니까.',
+            '제인이 회선에 대고 말한다. "아직 서명 안 했습니다." 3초의 정적. ' +
+            '그리고 카엘의 목소리가 조금 낮아진다 — 취조가 아니라 대화의 높이로.\n\n' +
+            '카엘 — "…기억해 두마. 그 방에서 나올 때, 네가 뭘 들고 나오는지도." ' +
+            '회선이 닫힌다. 렌은 아무 말 없이 계약서를 접는다.',
+          line: '…경비대랑 통화를 하네, 내 방에서. 배짱은 인정할게. 신용은 깎고.',
           emotion: 'Suspicious',
         },
-        effects: { affinity: 5, suspicion: 3 },
+        effects: { affinity: -4, suspicion: 7 },
+        rivalEffects: { npc: 'Kael', affinity_change: 12, suspicion_change: -8 },
         next: 'ACT2_REN_AUCTION_02',
       },
       {
@@ -471,11 +478,12 @@ export const SCRIPT = {
         reaction: {
           narration:
             '제인이 계약서를 밀어낸다. 렌은 화내지 않는다. 대신 숫자를 45로 고치고, 그 아래 한 줄을 추가한다. ' +
-            '— 원본 칩 소유권은 렌에게 귀속.',
+            '— 원본 칩 소유권은 렌에게 귀속. 경비대 회선은 여전히 열린 채 두 사람의 흥정을 듣고 있다.',
           line: '올려줄게. 대신 물건은 내가 갖는다. 값을 올리려면 뭔가는 내놔야지. 그게 흥정이야, 제인.',
           emotion: 'Threatening',
         },
         effects: { affinity: 2, suspicion: 6, heat: 2 },
+        rivalEffects: { npc: 'Kael', suspicion_change: 10 },
         next: 'ACT2_REN_AUCTION_02',
       },
     ],
@@ -596,7 +604,11 @@ export const SCRIPT = {
     emotion: 'Neutral',
     narration:
       '자정의 유치장. 순찰 교대 발소리가 멀어지고, 규정에 없는 발걸음 하나가 다가온다. ' +
-      '카엘이다. 손에 사면 서류 대신 식은 커피 두 잔이 들려 있다. 그가 창살 밖 바닥에 앉는다.',
+      '카엘이다. 손에 사면 서류 대신 식은 커피 두 잔이 들려 있다. 그가 창살 밖 바닥에 앉는다.\n\n' +
+      '그리고 제인의 귀 안쪽에서 지직거리는 소리가 난다 — 압수당한 줄 알았던 골전도 수신기. ' +
+      '누군가 주파수를 비틀어 밀어 넣은 것이다. ' +
+      '에코 — "거기 있는 거 알아. 네가 넘긴 그 영상, 지금 봉인실로 가는 중이야. ' +
+      '벽 세 번 두드리면 3분 안에 문 딴다. …두드릴래?"',
     line: '이 시간엔 계급도 죄목도 잠들지. 묻겠다. 너는 그 진실을 감당할 각오가 정말 있나, 아니면 그냥 멈추지 못하는 것뿐인가.',
     choices: [
       {
@@ -605,13 +617,29 @@ export const SCRIPT = {
         reaction: {
           narration:
             '제인의 대답에 카엘이 짧게 웃는다. 20년 만에 처음 나온 웃음 같은 소리다. ' +
-            '그가 커피를 창살 사이로 밀어 넣는다. 이미 식어 있다.',
+            '그가 커피를 창살 사이로 밀어 넣는다. 귓속의 지직거림은 대답 없이 끊긴다.',
           line:
             '…정직하군. 각오가 있다고 했으면 나는 널 믿지 않았을 거다. ' +
             '각오는 나중에 붙이는 이름이야. 먼저 오는 건 언제나 멈추지 못함이지. 나도 그랬다.',
           emotion: 'Friendly',
         },
         effects: { affinity: 11, suspicion: -4 },
+        rivalEffects: { npc: 'Echo', affinity_change: -5, suspicion_change: 8 },
+        next: 'ACT2_KAEL_INTERROGATION_02',
+      },
+      {
+        text: '[은신] 벽을 세 번 두드린다.',
+        tone: 'Stealth',
+        reaction: {
+          narration:
+            '제인의 손등이 콘크리트를 세 번 친다. 카엘은 그 소리를 들었다. 듣고도 일어서지 않는다. ' +
+            '커피 두 잔이 창살 사이에서 같이 식어간다.\n\n' +
+            '귓속에서 에코가 짧게 웃는다. "좋아. 3분."',
+          line: '…그 소리가 무슨 뜻인지 나는 안다. 그리고 지금 일어서지 않는 것이 내 마지막 관용이다.',
+          emotion: 'Threatening',
+        },
+        effects: { affinity: -6, suspicion: 9 },
+        rivalEffects: { npc: 'Echo', affinity_change: 14, suspicion_change: -6 },
         next: 'ACT2_KAEL_INTERROGATION_02',
       },
       {
@@ -620,26 +648,14 @@ export const SCRIPT = {
         reaction: {
           narration:
             '카엘의 손이 컵에서 멈춘다. 복도 형광등이 한 번 깜빡인다. ' +
-            '그가 오래 대답하지 않아서, 제인은 답을 이미 들은 셈이 된다.',
+            '그가 오래 대답하지 않아서, 제인은 답을 이미 들은 셈이 된다. 귓속의 신호는 저 혼자 끊긴다.',
           line:
             '…한 명. 20년 전에. 진실을 쫓던 젊은 추적자였다. 규정대로면 그를 넘겼어야 했지. ' +
             '넘기지 않았고, 그는 그 대가로 죽었다. 규정을 어긴 대가가 아니라 — 내가 끝까지 못 지켜서.',
           emotion: 'Suspicious',
         },
         effects: { affinity: 7, suspicion: 2 },
-        next: 'ACT2_KAEL_INTERROGATION_02',
-      },
-      {
-        text: '[은신] 대답을 피하고 거리를 유지한다.',
-        tone: 'Stealth',
-        reaction: {
-          narration:
-            '제인은 벽 쪽으로 돌아눕는다. 카엘은 재촉하지 않는다. 커피 두 잔이 창살 사이에서 같이 식어간다. ' +
-            '한참 뒤, 그가 일어서는 소리가 들린다.',
-          line: '…그래. 대답하지 않는 것도 대답이지. 나도 20년을 그렇게 했다. 추천하지는 않겠다.',
-          emotion: 'Neutral',
-        },
-        effects: { affinity: 1, suspicion: 1, heat: -4 },
+        rivalEffects: { npc: 'Echo', suspicion_change: 5 },
         next: 'ACT2_KAEL_INTERROGATION_02',
       },
     ],
@@ -760,7 +776,10 @@ export const SCRIPT = {
     emotion: 'Neutral',
     narration:
       '새벽. 에코가 제인을 송출탑 지하로 데려간다. 벽 한 면에 손으로 눌러쓴 이름 열둘이 촛불 아래 번져 있다. ' +
-      '여기까지는 반군의 구호가 들리지 않는다. 촛농 떨어지는 소리만 난다.',
+      '여기까지는 반군의 구호가 들리지 않는다. 촛농 떨어지는 소리만 난다.\n\n' +
+      '제인의 단말이 진동한다. 암호화된 개인 회선 — 렌이다. 그가 어떻게 이 주파수를 알았는지는 묻지 않는 편이 낫다. ' +
+      '렌 — "제인. 그 애 옆에 있는 거 알아. …값은 아직 유효해. 지금 나오면 지분 45. ' +
+      '거기 있으면 오늘 밤 안에 그 이름들 옆에 네 이름이 하나 더 붙는다."',
     line: '나는 이미 열둘을 묻었어. 그러니 나한테 "대가"를 말하지 마. 다만 묻자 — 너는 몇을 묻을 각오가 됐지?',
     choices: [
       {
@@ -769,13 +788,28 @@ export const SCRIPT = {
         reaction: {
           narration:
             '에코가 촛불 하나를 손으로 감싼다. 불이 그녀의 손바닥 안에서 흔들린다. ' +
-            '오래 침묵한 뒤, 그녀가 열두 개의 이름 옆에 빈자리를 손가락으로 짚는다.',
+            '제인은 단말을 뒤집어 놓는다. 진동이 콘크리트 바닥에서 몇 번 더 울리다 멎는다.',
           line:
             '…그 대답을 기다렸어. 3년 동안. 아무도 그렇게 말해주지 않았거든. ' +
             '전부 "필요한 희생"이라고 했지. 제인, 그럼 방법을 같이 찾자. 표적을 좁히는 방법을.',
           emotion: 'Friendly',
         },
         effects: { affinity: 12, suspicion: -3 },
+        rivalEffects: { npc: 'Ren', affinity_change: -8, suspicion_change: 6 },
+        next: 'ACT2_ECHO_BROADCAST_02',
+      },
+      {
+        text: '[기만] 렌의 제안을 받는 척 시간을 번다.',
+        tone: 'Deceptive',
+        reaction: {
+          narration:
+            '제인이 회선에 짧게 답한다. "생각해볼게." 렌 쪽에서 3초쯤 아무 말이 없다가, 회선이 끊긴다. ' +
+            '에코는 그 통화를 전부 들었다. 촛불 열두 개가 그녀의 눈에서 흔들린다.',
+          line: '…지분 45래. 내 동생 값은 얼마였을까, 제인. 그건 안 물어봤어?',
+          emotion: 'Threatening',
+        },
+        effects: { affinity: -7, suspicion: 8 },
+        rivalEffects: { npc: 'Ren', affinity_change: 10 },
         next: 'ACT2_ECHO_BROADCAST_02',
       },
       {
@@ -784,24 +818,12 @@ export const SCRIPT = {
         reaction: {
           narration:
             '제인이 짚은 이름 앞에서 에코의 어깨가 굳는다. 그 이름만 다른 필체다 — 더 눌러 쓴, 더 깊게 파인. ' +
-            '그녀가 촛불을 그쪽으로 조금 민다.',
+            '단말은 계속 울리다가, 스스로 조용해진다.',
           line: '…내 동생이야. 열여섯. 내가 만든 신호에 맞춰 광장에 나왔다가. …다음 질문은 하지 마.',
           emotion: 'Suspicious',
         },
         effects: { affinity: 8, suspicion: 4 },
-        next: 'ACT2_ECHO_BROADCAST_02',
-      },
-      {
-        text: '[도발] 열둘로는 부족하다고, 더 태우라고 말한다.',
-        tone: 'Aggressive',
-        reaction: {
-          narration:
-            '에코가 제인의 멱살을 잡는다. 촛불 하나가 넘어져 꺼진다. 어둠 속에서 그녀의 숨소리만 거칠다. ' +
-            '그리고 그녀가 손을 놓는다. 웃음소리가 지하실에 낮게 깔린다.',
-          line: '…맞아. 부족하지. 그렇게 말해주는 사람이 필요했어. 우리 둘은 지옥에서도 잘 지내겠다, 제인.',
-          emotion: 'Threatening',
-        },
-        effects: { affinity: 5, suspicion: 7, heat: 5 },
+        rivalEffects: { npc: 'Ren', suspicion_change: 4 },
         next: 'ACT2_ECHO_BROADCAST_02',
       },
     ],
@@ -1155,6 +1177,7 @@ export function choiceBeat(nodeId, choiceText, route) {
     background_tone: (advancing ? nextScene.tone : s.tone) || 'Normal',
     new_fragments: c.fragments || [],
     set_flags: c.flags || [],
+    rival_effects: c.rivalEffects || null,
     evidence_result: 'none',
     generated_choices: (nextScene || s).choices.map((x) => ({ text: x.text, tone: x.tone })),
   }

@@ -177,3 +177,32 @@ describe('script — 루트를 고르기 전에 세 인물을 만나야 한다',
     expect(map.Aggressive).toBe('ACT2_ECHO_BROADCAST_01')
   })
 })
+
+describe('script — 고르지 않은 세력도 무대에 오른다', () => {
+  const MID = {
+    ACT2_REN_BACKROOM_01: { rival: 'Kael', 이름: '카엘' },
+    ACT2_KAEL_HOLDING_01: { rival: 'Echo', 이름: '에코' },
+    ACT2_ECHO_MARTYR_01: { rival: 'Ren', 이름: '렌' },
+  }
+  it('각 루트 중반에 상대 세력이 직접 말을 건다', () => {
+    // 없으면 고르지 않은 두 세력의 게이지가 끝까지 장식으로 남는다.
+    for (const [node, { 이름 }] of Object.entries(MID)) {
+      expect(SCRIPT[node].narration, `${node}에 ${이름} 개입 없음`).toContain(`${이름} —`)
+    }
+  })
+  it('그 응답이 상대 세력 게이지를 실제로 움직인다', () => {
+    for (const [node, { rival }] of Object.entries(MID)) {
+      const withRival = SCRIPT[node].choices.filter((c) => c.rivalEffects?.npc === rival)
+      expect(withRival.length, `${node}`).toBeGreaterThanOrEqual(2)
+    }
+  })
+  it('상대에게 기우는 선택과 등지는 선택이 모두 있다', () => {
+    for (const [node, { rival }] of Object.entries(MID)) {
+      const deltas = SCRIPT[node].choices
+        .filter((c) => c.rivalEffects?.npc === rival)
+        .map((c) => c.rivalEffects.affinity_change ?? 0)
+      expect(Math.max(...deltas), `${node}`).toBeGreaterThan(0)
+      expect(Math.min(...deltas), `${node}`).toBeLessThan(0)
+    }
+  })
+})
