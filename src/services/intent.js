@@ -91,9 +91,14 @@ ${list}
 }
 
 // 최종 판정: 모델 → 실패 시 키워드 규칙.
-export async function resolveIntent({ text, choices, signal }) {
-  const byModel = await classifyIntent({ text, choices, signal })
-  if (byModel !== null) return byModel
+// useModel=false면 모델을 아예 부르지 않는다 — 웹에 배포하면 방문자에겐
+// Ollama가 없어서 매 턴 localhost:11434 호출이 실패하고 콘솔에 에러가 쌓인다
+// (HTTPS에선 mixed content로 차단). 없는 걸 알면 부르지 않는 게 맞다.
+export async function resolveIntent({ text, choices, signal, useModel = true }) {
+  if (useModel) {
+    const byModel = await classifyIntent({ text, choices, signal })
+    if (byModel !== null) return byModel
+  }
   return classifyByKeyword(text, choices)
 }
 
@@ -136,10 +141,10 @@ ${list}
 }
 
 // 키워드 우선(빠르고 확실), 없으면 모델에 물어본다.
-export async function resolveTopic({ text, topics, signal }) {
+export async function resolveTopic({ text, topics, signal, useModel = true }) {
   const byKeyword = topicByKeyword(text)
   if (byKeyword) return byKeyword
-  return classifyTopic({ text, topics, signal })
+  return useModel ? classifyTopic({ text, topics, signal }) : null
 }
 
 // ---- 모델이 직접 답하기(authoring 주제 밖의 질문) ----
