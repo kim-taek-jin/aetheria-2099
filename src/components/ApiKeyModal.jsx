@@ -45,10 +45,28 @@ export default function ApiKeyModal({ initial = '', onSave, onClose, dismissable
           <h2 className="text-lg font-bold tracking-widest">ACCESS KEY // BYOK</h2>
         </div>
 
+        {/* 무료 공개판에서는 키가 선택 사항이다. 본편은 전부 손으로 쓴 서사라
+            키 없이도 끝까지 플레이된다 — 그 사실을 먼저 말해야 오해가 없다. */}
+        <div className="mb-4 rounded border border-neon-green/30 bg-neon-green/5 p-3">
+          <p className="mb-1 text-xs font-bold text-neon-green">키는 없어도 됩니다</p>
+          <p className="text-xs leading-relaxed text-cyan-200/70">
+            이야기는 전부 사람이 쓴 것이라, 키 없이도 처음부터 결말까지 플레이할 수 있습니다.
+          </p>
+        </div>
+
+        <p className="mb-3 text-xs leading-relaxed text-cyan-200/70">
+          키를 넣으면 <b className="text-neon-cyan">자유 입력이 더 자유로워집니다</b>. 준비된 화제를 벗어난
+          질문이나 예상 밖의 행동에도 등장인물이 그 자리에서 답합니다.
+          <br />
+          <span className="text-cyan-300/50">
+            (없을 때는 인물이 자기답게 화제를 돌립니다 — 게임 진행에는 지장이 없습니다.)
+          </span>
+        </p>
+
         <p className="mb-4 text-xs leading-relaxed text-cyan-200/70">
-          Google AI Studio의 <b>Gemini 무료 API Key</b>를 입력하세요. 이 키는{' '}
-          <b className="text-neon-green">당신의 브라우저(LocalStorage)에만 저장</b>되며 우리 서버로 전송되지
-          않습니다.
+          Google AI Studio의 <b>Gemini 무료 API Key</b>를 쓰면 됩니다. 이 키는{' '}
+          <b className="text-neon-green">당신의 브라우저에만 저장</b>되고 구글로 직접 전송됩니다 — 이 게임에는
+          서버가 없어서 우리가 볼 수도, 가져갈 수도 없습니다.
         </p>
 
         <input

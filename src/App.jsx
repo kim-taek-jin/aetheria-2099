@@ -587,8 +587,19 @@ export default function App() {
         <div className="flex items-center justify-center gap-2 rounded border border-neon-green/40 bg-neon-green/10 py-1 text-[11px] tracking-widest text-neon-green">
           {forceLocal
             ? '🖥 내 모델 전용 모드 · 로컬 자체 모델로만 구동 · 오프라인 · 운영비 0'
-            : '🖥 로컬 자체 모델 구동 중 · 오프라인 · 운영비 0 (API 키 불필요) · 🔑 키를 넣으면 HD(클라우드) 모드'}
+            : '🖥 로컬 자체 모델 구동 중 · 오프라인 · 운영비 0 (API 키 불필요)'}
         </div>
+      )}
+
+      {/* 키도 로컬 모델도 없는 방문자(= 웹 공개판의 기본 상태). 게임은 온전히
+          돌아가므로 경고가 아니라 안내다 — 조용한 한 줄로만 둔다. */}
+      {!aiReady && !save.endingReached && !save.failed && (
+        <button
+          onClick={() => setShowKeyModal(true)}
+          className="w-full rounded border border-cyan-500/20 py-1 text-[11px] tracking-widest text-cyan-300/40 transition-colors hover:border-neon-cyan/40 hover:text-neon-cyan"
+        >
+          🔑 API 키를 넣으면 자유 입력이 더 자유로워집니다 — 준비된 화제 밖의 질문에도 답합니다
+        </button>
       )}
 
       {fellBack && (
