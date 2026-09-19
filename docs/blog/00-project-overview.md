@@ -5,7 +5,6 @@
 > 결국 그 모델에게 **글쓰기 대신 다른 일**을 맡기게 된 이야기.
 
 - **기간**: 2026.08 ~ 2026.09
-- **저장소**: https://github.com/kim-taek-jin/aetheria-2099
 - **스택**: Vite · React · Tailwind / Qwen2.5-7B · QLoRA · MLX · Ollama
 
 ---
