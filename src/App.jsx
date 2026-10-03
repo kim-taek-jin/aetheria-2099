@@ -230,7 +230,7 @@ export default function App() {
   // 체험판에선 잠긴 루트를 숨기지 않고 자물쇠를 채워 보여준다.
   const fixedChoices = localizeFixedChoices(
     save.currentNode,
-    endingChoicesFor(save) || markLockedChoices(routeChoicesOf(save.currentNode)),
+    markLockedChoices(endingChoicesFor(save)) || markLockedChoices(routeChoicesOf(save.currentNode)),
     lang,
   )
   const shownChoices =
@@ -461,7 +461,7 @@ export default function App() {
     // 체험판 잠금 — 클릭뿐 아니라 자유 입력(의도 분류)으로도 잠긴 길에 들어갈 수
     // 있으므로, 상태에 반영하기 직전 한 곳에서 막는다. 턴은 소비되지 않는다.
     if (isLockedNode(data.story_branch)) {
-      setUpsell('route')
+      setUpsell(data.story_branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
       return
     }
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
@@ -750,7 +750,7 @@ export default function App() {
         fragmentCount={save.fragments?.length || 0}
         onChoose={(c) =>
           c.locked
-            ? setUpsell('route')
+            ? setUpsell(c.branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
             : offlineMode
             ? runDemo(c)
             : advance(c.text, { fromChoice: true, forceBranch: c.branch })

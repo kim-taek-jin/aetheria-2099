@@ -18,14 +18,16 @@ export default function UpsellModal({ reason = 'route', onClose }) {
       <div className="panel-border w-full max-w-md rounded-lg p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center gap-2 text-neon-amber">
           <Lock size={18} />
-          <h2 className="text-base font-bold tracking-widest">{t('upsellTitle')}</h2>
+          <h2 className="text-base font-bold tracking-widest">
+            {reason === 'ending-locked' ? t('upsellEndingLockedTitle') : t('upsellTitle')}
+          </h2>
           <button onClick={onClose} className="ml-auto text-cyan-300/50 hover:text-cyan-200" aria-label={t('close')}>
             <X size={16} />
           </button>
         </div>
 
         <p className="mb-4 text-xs leading-relaxed text-cyan-200/70">
-          {reason === 'ending' ? t('upsellEnding') : t('upsellRoute')}
+          {reason === 'ending' ? t('upsellEnding') : reason === 'ending-locked' ? t('upsellEndingLocked') : t('upsellRoute')}
         </p>
 
         <ul className="mb-5 space-y-2">
@@ -56,7 +58,7 @@ export default function UpsellModal({ reason = 'route', onClose }) {
             onClick={onClose}
             className="neon-btn rounded border border-neon-cyan/40 px-4 py-2 text-sm text-neon-cyan"
           >
-            {reason === 'ending' ? t('close') : t('backToRen')}
+            {reason === 'route' ? t('backToRen') : reason === 'ending-locked' ? t('backToEndings') : t('close')}
           </button>
         </div>
       </div>

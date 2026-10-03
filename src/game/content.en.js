@@ -70,6 +70,9 @@ export const FRAGMENTS_EN = {
     "Memory fragment · Blank #3: 'Sleep now, when morning comes…' It wasn't my mother's voice. It was Lien's original recording, encoded straight into my head at a Sector 9 terminal three years ago.",
   '기억 조각 · 빈자리 #4: 나는 삼류 브로커가 아니었다. 3년 전 리엔의 수석 연구원이었고, 정화된 외부의 하늘을 본 뒤 이 열쇠(칩 #00)를 들고 스스로 기억을 지운 채 슬럼가로 내려왔던 피험자였다.':
     "Memory fragment · Blank #4: I was never a third-rate broker. Three years ago I was Lien's lead researcher — the test subject who saw the purified sky outside, took this key (chip #00), erased her own memory, and walked down into the slums.",
+  // 체험판에서 가린 빈자리 #4 (edition.js REDACTED_GAP)
+  '기억 조각 · 빈자리 #4: ██████ ███ ████. — 이 기억은 정식판에서 복원된다.':
+    'Memory fragment · Blank #4: ██████ ███ ████. — This memory is restored in the full game.',
   // scene truths
   '기록 조각: 도시 밖 스카이라인이 회색이 아니었다. 잠깐이지만 — 초록이었다.':
     'Record fragment: The skyline outside the city was not gray. Only for a moment — it was green.',

@@ -11,6 +11,7 @@
 // ============================================================
 
 import { SCENES } from './scenes.js'
+import { demoGapFragment } from './edition.js'
 
 export const SAVE_VERSION = 1
 export const STORAGE_KEY = 'aetheria2099.save.v1'
@@ -180,7 +181,7 @@ export function applyResponse(save, res, playerInput) {
     // '빈자리' 조각은 반대로 **진입 시** 지급한다. #4가 엔딩 선택 노드에 있어서,
     // 떠날 때 주면 엔딩 자격 판정(eligibleEndings)이 이미 끝난 뒤라 진엔딩이
     // 영원히 열리지 않는다.
-    const gap = SCENES[nextNode]?.gapFragment
+    const gap = demoGapFragment(nextNode) ?? SCENES[nextNode]?.gapFragment
     if (typeof gap === 'string' && gap.trim() && !next.fragments.includes(gap.trim())) {
       next.fragments.push(gap.trim())
     }

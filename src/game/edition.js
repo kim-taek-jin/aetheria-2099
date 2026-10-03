@@ -25,9 +25,31 @@ export const LOCKED_ROUTES = {
   Echo: { prefix: 'ACT2_ECHO_', label: '에코의 길' },
 }
 
+// 체험판에서 잠그는 결말. 진엔딩(제인의 정체)은 게임 최대의 반전이고, 그 조건인
+// '빈자리' 조각 4개가 렌 루트에서도 전부 모인다 — 잠그지 않으면 체험판이 반전을
+// 공짜로 풀어버린다. 숨겨진 NEXUS 결말도 정식판의 몫으로 남긴다.
+// 숨기지 않고 자물쇠로 보여준다: "저 너머에 뭔가 있다"가 정식판으로 가는 이유다.
+export const LOCKED_ENDINGS = ['ENDING_JAYNE_ORIGIN', 'ENDING_NEXUS_TRUST']
+
+// 체험판에서 내용을 가리는 장면 조각. 빈자리 #4에는 반전이 그대로 적혀 있어서,
+// 결말을 잠가도 기억 조각 목록에서 새어 나간다. 아예 빼면 진엔딩 조건(빈자리 4개)이
+// 사라져 자물쇠조차 안 보이므로, '가린 조각'으로 준다 — 반전은 지키고 미끼는 남긴다.
+export const WITHHELD_GAP_NODES = ['ACT3_DESIGNER_CONFRONT_01']
+export const REDACTED_GAP = '기억 조각 · 빈자리 #4: ██████ ███ ████. — 이 기억은 정식판에서 복원된다.'
+
 export function isLockedNode(nodeId, demo = IS_DEMO) {
   if (!demo || !nodeId) return false
+  if (LOCKED_ENDINGS.includes(nodeId)) return true
   return Object.values(LOCKED_ROUTES).some((r) => nodeId.startsWith(r.prefix))
+}
+
+export function isWithheldGap(nodeId, demo = IS_DEMO) {
+  return Boolean(demo && WITHHELD_GAP_NODES.includes(nodeId))
+}
+
+// 체험판이면 가린 조각을, 아니면 null(원래 조각을 쓴다).
+export function demoGapFragment(nodeId, demo = IS_DEMO) {
+  return isWithheldGap(nodeId, demo) ? REDACTED_GAP : null
 }
 
 // 선택지 중 잠긴 루트로 가는 것에 표시를 붙인다(숨기지 않는다).
