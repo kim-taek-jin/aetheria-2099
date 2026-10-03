@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch } from 'lucide-react'
+import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch, Sparkles } from 'lucide-react'
 
 // 각 톤의 아이콘·색 + "판돈" 태그(위험/보상을 한눈에 — 선택에 무게를 준다).
 const TONE_STYLE = {
@@ -12,6 +12,15 @@ const TONE_STYLE = {
   Hack: { icon: Terminal, cls: 'border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/10', stake: '추적↑↑', risk: 2 },
   Stealth: { icon: EyeOff, cls: 'border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10', stake: '추적↓', risk: -1 },
   Flee: { icon: Footprints, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: '이탈', risk: -1 },
+}
+
+// 잔향(지난 판의 기억으로 열린 선택지) — 다른 색, 한 줄 전체. 눈에 띄어야 한다:
+// "다시 하니까 이게 열렸다"는 감각이 이 시스템의 보상 전부다.
+const RESIDUE_STYLE = {
+  icon: Sparkles,
+  cls: 'border-neon-amber/60 bg-neon-amber/5 text-neon-amber hover:bg-neon-amber/15 sm:col-span-3',
+  stake: '지난 판의 기억',
+  risk: 0,
 }
 
 export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
@@ -32,7 +41,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
     <div className="panel-border rounded-lg p-3">
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
         {(choices || []).map((c, i) => {
-          const s = TONE_STYLE[c.tone] || TONE_STYLE.Honest
+          const s = c.residue ? RESIDUE_STYLE : TONE_STYLE[c.tone] || TONE_STYLE.Honest
           const Icon = s.icon
           return (
             <button
@@ -43,7 +52,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
             >
               <span className="mb-1 flex items-center gap-1">
                 <Icon size={11} className="opacity-70" />
-                <span className="opacity-70">{c.tone}</span>
+                <span className="opacity-70">{c.residue ? '잔향' : c.tone}</span>
                 {/* 판돈 태그: 위험은 붉게, 잠행/이탈은 시안으로 — 선택의 무게를 노출 */}
                 <span
                   className={`ml-auto rounded px-1 text-[9px] font-bold tracking-wider ${

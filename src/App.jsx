@@ -20,6 +20,7 @@ import { resolveIntent, resolveTopic, answerWithModelGated } from './services/in
 import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
+import { RESIDUES, RESIDUE_FROM, residueChoicesFor, residueBeat, getResidue, recordResidue } from './game/residue.js'
 import {
   createNewGame,
   applyResponse,
@@ -141,6 +142,9 @@ export default function App() {
   const [fellBack, setFellBack] = useState(false) // 이번 턴 클라우드→로컬 폴백 여부
   const [delta, setDelta] = useState(null) // 이번 턴 상태 변화(선택의 무게 연출)
   const [canonMark, setCanonMark] = useState(null) // 플레이어 행동이 세계에 남긴 새 흔적
+  // 잔향: 회차를 넘어 남는 기억. 세이브와 분리돼 새 판을 시작해도 유지된다.
+  const [residueKnown, setResidueKnown] = useState(() => getResidue())
+  const [residueMark, setResidueMark] = useState(null)
   // "내 모델 전용" 모드 — 키가 있어도 클라우드를 안 쓰고 로컬만 사용(오프라인·프라이버시).
   const [forceLocal, setForceLocal] = useState(() => {
     try {
@@ -202,7 +206,27 @@ export default function App() {
 
   // 루트 분기 노드에서는 authoring 된 선택지를 쓴다(모델 생성분 대신).
   // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
-  const shownChoices = endingChoicesFor(save) || routeChoicesOf(save.currentNode) || beat?.generated_choices || []
+  // 잔향 선택지는 손으로 쓴 장면의 평상 선택지 뒤에만 붙는다(분기·결말 노드 제외).
+  const fixedChoices = endingChoicesFor(save) || routeChoicesOf(save.currentNode)
+  const shownChoices =
+    fixedChoices ||
+    [
+      ...(beat?.generated_choices || []),
+      ...(hasScript(save.currentNode) ? residueChoicesFor(save.currentNode, residueKnown, save.flags) : []),
+    ]
+
+  // 잔향 획득 — 그 진실이 드러나는 장면에 들어선 순간 남는다.
+  useEffect(() => {
+    const id = RESIDUE_FROM[save.currentNode]
+    if (!id) return
+    const merged = recordResidue(id)
+    setResidueKnown(merged.known)
+    if (merged.isNew) {
+      setResidueMark(RESIDUES[id])
+      const t = setTimeout(() => setResidueMark(null), 6000)
+      return () => clearTimeout(t)
+    }
+  }, [save.currentNode])
 
   // 선생성: 비트가 확정되면 플레이어가 읽는 동안 선택지 3개의 다음 턴을 미리 만든다.
   // 로컬 모델일 때만 — 클라우드에서 3배로 호출하면 사용자의 유료 쿼터를 3배로 태운다.
@@ -296,6 +320,11 @@ export default function App() {
     // 어느 쪽이든 화면에 나가는 글은 손으로 쓴 것이다. 모델은 "무엇을 묻는가/
     // 무엇을 하려는가"를 고르는 일만 한다 — 7B가 실제로 잘하는 일.
     let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
+    if (!scripted && meta.fromChoice && hasScript(save.currentNode)) {
+      const sc = SCRIPT[save.currentNode]
+      const r = residueBeat(save.currentNode, playerInput, sc.choices)
+      if (r) scripted = { ...r, npc_name: sc.npc, background_tone: sc.tone || 'Normal' }
+    }
     if (!scripted && meta.evidenceVerdict && hasScript(save.currentNode)) {
       scripted = evidenceScriptBeat(save.currentNode, meta.evidenceVerdict, save.route)
     }
@@ -609,6 +638,15 @@ export default function App() {
       )}
 
       {/* 레일 위의 창발 — 플레이어 행동이 세계에 남긴 새 흔적(canon) 알림 */}
+      {residueMark && (
+        <div className="intro-up rounded border border-neon-amber/50 bg-neon-amber/10 px-3 py-1.5 text-center text-[11px] text-neon-amber">
+          <span className="font-bold tracking-widest">◈ 잔향이 남았다 — {residueMark.label}</span>
+          <span className="block text-[10px] text-neon-amber/70">
+            이 기억은 다음 판에도 남는다. 다른 길에서 새로운 선택지가 열린다.
+          </span>
+        </div>
+      )}
+
       {canonMark && (
         <div className="intro-up flex items-center justify-center gap-2 rounded border border-neon-magenta/40 bg-neon-magenta/10 py-1 text-[11px] tracking-widest text-neon-magenta">
           ✎ 세계에 흔적을 남겼다 —{' '}

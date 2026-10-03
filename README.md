@@ -118,6 +118,7 @@ Claude를 교사로 `(입력→정제 JSON)` 학습쌍을 모아 Qwen2.5-7B를 Q
 | 세력 루트 확정(Act2 진입 시 고정) | `state.js` `route` | 클라이언트 |
 | 엔딩 게이트(루트·관계·기억이 6종 결정) | `scenes.js` `eligibleEndings` | 클라이언트 |
 | 증거 추리(씬의 약점 ↔ 조각 매칭) | `scenes.js` `judgeEvidence` | 클라이언트 |
+| 잔향 — 다른 루트에서 본 진실이 다음 판의 선택지를 연다(3종 × 2곳) | `game/residue.js` | **사람** · 회차 간 저장 |
 | 본편 서사(24씬 · 선택별 반응 · 동행별 분기) | `game/script.js` | **사람** |
 | 질의응답(화자 4 × 주제 20) | `game/answers.js` | **사람** |
 | 자유 입력 의도·주제 판별 | `services/intent.js` | **모델** |
@@ -141,6 +142,7 @@ src/
 │  ├─ scenes.js                # 씬 바이블 · 엔딩 게이트 · 증거 정답
 │  ├─ state.js                 # 상태머신 + SaveGameV1 + 게이팅
 │  ├─ lore.js / collection.js  # 로어 · 결말 수집
+│  ├─ residue.js               # 잔향(회차를 넘어 남는 기억)
 │  └─ offline.js               # (레거시) 스크립트 데모
 ├─ services/
 │  ├─ intent.js                # ★ 의도·주제 분류 + 모델 답변 품질 게이트

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { RotateCcw, BookLock, Trophy, Clock, Fingerprint } from 'lucide-react'
 import { SCENES } from '../game/scenes.js'
 import { ALL_ENDINGS, ENDING_COUNT, recordEnding } from '../game/collection.js'
+import { RESIDUES, RESIDUE_COUNT, getResidue } from '../game/residue.js'
 import CodeRain from './CodeRain.jsx'
 
 // Per-ending visual identity: accent color, sigil, epigraph.
@@ -71,6 +72,7 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
   // Cross-run collection: record this ending, learn if it's newly discovered.
   const [col, setCol] = useState({ discovered: [], isNew: false })
   useEffect(() => setCol(recordEnding(endingId)), [endingId])
+  const residue = useMemo(() => getResidue(), [endingId])
   const scene = SCENES[endingId]
   const style = ENDING_STYLE[endingId] || ENDING_STYLE.ENDING_KAEL_SILENCE
   const hidden = endingId === 'ENDING_NEXUS_TRUST' || endingId === 'ENDING_JAYNE_ORIGIN'
@@ -190,6 +192,25 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
                 )
               })}
             </div>
+          </div>
+
+          {/* 잔향 — 다음 판을 다르게 만드는 것. "다시 하면 뭐가 달라지는가"에 대한 답. */}
+          <div className="mt-3 border-t border-cyan-500/10 pt-3 text-left">
+            <div className="mb-1.5 text-center text-[10px] tracking-[0.3em] text-neon-amber/60">
+              잔향 {residue.length}/{RESIDUE_COUNT}
+            </div>
+            <ul className="space-y-1 text-[11px]">
+              {Object.entries(RESIDUES).map(([id, r]) => (
+                <li key={id} className={residue.includes(id) ? 'text-neon-amber/85' : 'text-cyan-500/30'}>
+                  {residue.includes(id) ? `◈ ${r.label}` : '◇ 아직 보지 못한 진실이 다른 길에 있다'}
+                </li>
+              ))}
+            </ul>
+            {residue.length > 0 && residue.length < RESIDUE_COUNT && (
+              <p className="mt-1.5 text-center text-[10px] text-neon-amber/50">
+                제인은 잊었지만 당신은 기억한다. 다음 판에서 새로운 선택지가 열린다.
+              </p>
+            )}
           </div>
         </div>
 
