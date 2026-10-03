@@ -1,5 +1,6 @@
 import { Cpu, Eye, Heart, Radio, Satellite } from 'lucide-react'
 import { GATES, HEAT_WARN } from '../game/state.js'
+import { useT } from '../i18n/index.js'
 
 const NPC_COLOR = {
   Ren: 'text-neon-amber',
@@ -7,12 +8,7 @@ const NPC_COLOR = {
   Echo: 'text-neon-magenta',
   NEXUS: 'text-neon-green',
 }
-const TONE_LABEL = {
-  Normal: '평온',
-  Danger: '위험',
-  Melancholy: '비애',
-  Forest_Glitch: '숲 // 글리치',
-}
+const TONE_KEY = { Normal: 'toneNormal', Danger: 'toneDanger', Melancholy: 'toneMelancholy', Forest_Glitch: 'toneGlitch' }
 
 // delta: 이번 턴 변화량(없으면 null). invert=true면 +가 나쁨(의심·추적).
 function Gauge({ label, value, color, danger, delta, dkey, invert }) {
@@ -43,6 +39,7 @@ function Gauge({ label, value, color, danger, delta, dkey, invert }) {
 }
 
 export default function StatusPanel({ save, delta }) {
+  const t = useT()
   const npcs = ['Ren', 'Kael', 'Echo']
   const heat = save.heat || 0
   const heatHot = heat >= HEAT_WARN
@@ -55,7 +52,7 @@ export default function StatusPanel({ save, delta }) {
         </span>
         <span className="flex items-center gap-1 text-cyan-300/70">
           <Radio size={12} /> TONE: <b className={save.backgroundTone === 'Forest_Glitch' ? 'text-neon-green' : ''}>
-            {TONE_LABEL[save.backgroundTone] || save.backgroundTone}
+            {TONE_KEY[save.backgroundTone] ? t(TONE_KEY[save.backgroundTone]) : save.backgroundTone}
           </b>
         </span>
       </div>
@@ -102,7 +99,7 @@ export default function StatusPanel({ save, delta }) {
       {/* NEXUS trace — city-wide surveillance clock */}
       <div className="relative mt-2 flex items-center gap-2">
         <span className={`flex shrink-0 items-center gap-1 ${heatHot ? 'text-neon-red' : 'text-cyan-300/60'}`}>
-          <Satellite size={12} className={heatHot ? 'glitch-flicker' : ''} /> NEXUS 추적
+          <Satellite size={12} className={heatHot ? 'glitch-flicker' : ''} /> {t('heat')}
         </span>
         <div className="relative h-2 w-full overflow-hidden rounded bg-black/60">
           <div

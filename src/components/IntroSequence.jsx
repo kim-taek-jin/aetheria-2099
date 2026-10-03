@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import CodeRain from './CodeRain.jsx'
+import { useT } from '../i18n/index.js'
 
 // ============================================================
 //  인트로 — 시네마틱 영상(public/intro.mp4) → 글리치 타이틀 + 잭인.
@@ -9,6 +10,7 @@ import CodeRain from './CodeRain.jsx'
 // ============================================================
 
 export default function IntroSequence({ onDone }) {
+  const t = useT()
   const [stage, setStage] = useState('video') // 'video' | 'title'
   const [exiting, setExiting] = useState(false)
   const doneRef = useRef(false)
@@ -80,7 +82,7 @@ export default function IntroSequence({ onDone }) {
               AETHERIA<span className="text-neon-magenta">::</span>2099
             </h1>
             <p className="font-pixel text-center text-[11px] tracking-[0.25em] text-cyan-300/70 sm:text-sm">
-              기억을 파는 도시에서 — 단 하나의 진실
+              {t('tagline')}
             </p>
             <button
               onClick={(e) => {
@@ -89,14 +91,14 @@ export default function IntroSequence({ onDone }) {
               }}
               className="neon-btn font-pixel flex items-center gap-2 rounded border border-neon-cyan/50 bg-neon-cyan/10 px-6 py-2 text-sm font-bold tracking-widest text-neon-cyan"
             >
-              <ChevronRight size={16} /> 잭인 (시작)
+              <ChevronRight size={16} /> {t('jackIn')}
             </button>
           </div>
         </>
       )}
 
       <span className="font-pixel pointer-events-none absolute bottom-5 right-6 text-[10px] tracking-widest text-cyan-300/30">
-        {stage === 'video' ? '아무 곳이나 눌러 건너뛰기 →' : ''}
+        {stage === 'video' ? t('skipVideo') : ''}
       </span>
     </div>
   )

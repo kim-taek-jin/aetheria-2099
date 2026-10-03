@@ -1,17 +1,18 @@
 import { useRef, useState } from 'react'
 import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch, Sparkles, Lock } from 'lucide-react'
+import { useT } from '../i18n/index.js'
 
 // 각 톤의 아이콘·색 + "판돈" 태그(위험/보상을 한눈에 — 선택에 무게를 준다).
 const TONE_STYLE = {
   // dialogue
-  Honest: { icon: MessageSquare, cls: 'border-neon-green/40 text-neon-green hover:bg-neon-green/10', stake: '정면', risk: 0 },
-  Deceptive: { icon: Ghost, cls: 'border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10', stake: '기만', risk: 0 },
-  Aggressive: { icon: Flame, cls: 'border-neon-red/40 text-neon-red hover:bg-neon-red/10', stake: '추적↑↑', risk: 2 },
+  Honest: { icon: MessageSquare, cls: 'border-neon-green/40 text-neon-green hover:bg-neon-green/10', stake: 'stakeHonest', risk: 0 },
+  Deceptive: { icon: Ghost, cls: 'border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10', stake: 'stakeDeceptive', risk: 0 },
+  Aggressive: { icon: Flame, cls: 'border-neon-red/40 text-neon-red hover:bg-neon-red/10', stake: 'stakeAggressive', risk: 2 },
   // action
-  Investigate: { icon: Search, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: '단서', risk: 0 },
-  Hack: { icon: Terminal, cls: 'border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/10', stake: '추적↑↑', risk: 2 },
-  Stealth: { icon: EyeOff, cls: 'border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10', stake: '추적↓', risk: -1 },
-  Flee: { icon: Footprints, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: '이탈', risk: -1 },
+  Investigate: { icon: Search, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: 'stakeInvestigate', risk: 0 },
+  Hack: { icon: Terminal, cls: 'border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/10', stake: 'stakeHack', risk: 2 },
+  Stealth: { icon: EyeOff, cls: 'border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10', stake: 'stakeStealth', risk: -1 },
+  Flee: { icon: Footprints, cls: 'border-neon-amber/40 text-neon-amber hover:bg-neon-amber/10', stake: 'stakeFlee', risk: -1 },
 }
 
 // 잔향(지난 판의 기억으로 열린 선택지) — 다른 색, 한 줄 전체. 눈에 띄어야 한다:
@@ -19,7 +20,7 @@ const TONE_STYLE = {
 const RESIDUE_STYLE = {
   icon: Sparkles,
   cls: 'border-neon-amber/60 bg-neon-amber/5 text-neon-amber hover:bg-neon-amber/15 sm:col-span-3',
-  stake: '지난 판의 기억',
+  stake: 'residueStake',
   risk: 0,
 }
 
@@ -27,11 +28,12 @@ const RESIDUE_STYLE = {
 const LOCKED_STYLE = {
   icon: Lock,
   cls: 'border-white/15 text-cyan-200/40 hover:border-neon-amber/50 hover:text-neon-amber/80',
-  stake: '정식판',
+  stake: 'lockedStake',
   risk: 0,
 }
 
 export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
+  const t = useT()
   const [text, setText] = useState('')
   // 한글 IME 조합 상태. keydown 시점엔 마지막 글자가 아직 조합 중이라
   // Enter가 "조합 확정"으로 소비되고 전송이 무시된다(= Enter를 두 번 눌러야 함).
@@ -39,9 +41,9 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
   const composing = useRef(false)
 
   function submitFree() {
-    const t = text.trim()
-    if (!t || disabled) return
-    onFreeText(t)
+    const v = text.trim()
+    if (!v || disabled) return
+    onFreeText(v)
     setText('')
   }
 
@@ -60,7 +62,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
             >
               <span className="mb-1 flex items-center gap-1">
                 <Icon size={11} className="opacity-70" />
-                <span className="opacity-70">{c.locked ? '잠긴 길' : c.residue ? '잔향' : c.tone}</span>
+                <span className="opacity-70">{c.locked ? t('lockedTone') : c.residue ? t('residueTone') : c.tone}</span>
                 {/* 판돈 태그: 위험은 붉게, 잠행/이탈은 시안으로 — 선택의 무게를 노출 */}
                 <span
                   className={`ml-auto rounded px-1 text-[9px] font-bold tracking-wider ${
@@ -69,7 +71,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
                       : s.risk > 0 ? 'bg-neon-red/15 text-neon-red' : s.risk < 0 ? 'bg-cyan-400/15 text-cyan-300' : 'bg-white/5 text-cyan-300/50'
                   }`}
                 >
-                  {s.stake}
+                  {t(s.stake)}
                 </span>
               </span>
               {c.text}
@@ -82,10 +84,10 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
         <button
           onClick={onPresentEvidence}
           disabled={disabled || fragmentCount === 0}
-          title={fragmentCount === 0 ? '제시할 기억 조각이 없다' : '기억 조각을 증거로 제시'}
+          title={fragmentCount === 0 ? t('evidenceNone') : t('evidenceTitle')}
           className="neon-btn flex shrink-0 items-center gap-1 rounded border border-neon-green/40 bg-neon-green/5 px-3 text-xs text-neon-green disabled:cursor-not-allowed disabled:opacity-30"
         >
-          <FileSearch size={14} /> 증거 {fragmentCount > 0 && `(${fragmentCount})`}
+          <FileSearch size={14} /> {t('evidence')} {fragmentCount > 0 && `(${fragmentCount})`}
         </button>
         <input
           value={text}
@@ -102,7 +104,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
             if (e.key === 'Enter' && !composing.current) submitFree()
           }}
           disabled={disabled}
-          placeholder="자유 입력 // 제인의 대사를 직접 타이핑…"
+          placeholder={t('freePlaceholder')}
           className="flex-1 rounded border border-neon-cyan/25 bg-black/50 px-3 py-2 text-sm text-cyan-100 outline-none focus:border-neon-cyan disabled:opacity-40"
         />
         <button

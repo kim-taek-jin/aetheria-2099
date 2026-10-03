@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { blip } from '../audio/sound.js'
+import { useT } from '../i18n/index.js'
 
 const NPC_COLOR = {
   Ren: 'text-neon-amber',
@@ -20,6 +21,7 @@ const NARRATION_CHARS_PER_STEP = 3
 // streaming(있을 때): 로컬 모델이 생성하는 부분 텍스트 — 토큰이 자라는 것 자체가
 // 타이핑이라, 인터벌 타이핑을 건너뛰고 받은 만큼 바로 보여준다(대기 체감↓).
 export default function MainScreen({ beat, glitch, loading, streaming }) {
+  const t = useT()
   const [shown, setShown] = useState('')
   const [narrShown, setNarrShown] = useState('') // 나레이션 타이핑 진행분
   const [skipped, setSkipped] = useState(false) // 클릭으로 즉시 표시
@@ -102,12 +104,12 @@ export default function MainScreen({ beat, glitch, loading, streaming }) {
       {/* 타이핑 중엔 "클릭하면 건너뜀"을 알려준다 — 모르면 그냥 기다리게 된다. */}
       {typingNow && (
         <div className="pointer-events-none absolute bottom-2 right-3 text-[10px] tracking-widest text-cyan-300/35">
-          클릭 — 전부 표시
+          {t('clickReveal')}
         </div>
       )}
       {isGlitch && (
         <div className="pointer-events-none absolute right-3 top-3 text-[10px] tracking-widest text-neon-green glitch-flicker">
-          ░ SIGNAL LEAK // 외부 정화 영상 감지 ░
+          {t('signalLeak')}
         </div>
       )}
 
@@ -145,7 +147,7 @@ export default function MainScreen({ beat, glitch, loading, streaming }) {
       {/* 아직 아무 텍스트도 안 왔을 때만 대기 표시(스트리밍 첫 토큰 전). */}
       {loading && !streamingLive && (
         <p className="mt-4 animate-pulse text-xs tracking-widest text-neon-cyan/70">
-          ▓ NEXUS 연산 중 · 데이터 스트림 수신 ▓
+          {t('computing')}
         </p>
       )}
     </div>

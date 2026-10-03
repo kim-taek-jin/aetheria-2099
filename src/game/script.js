@@ -24,6 +24,8 @@
 // ============================================================
 
 import { answerBeat, evidenceBeat } from './answers.js'
+import { SCRIPT_EN } from './script.en.js'
+import { npcName } from '../i18n/index.js'
 
 export const SCRIPT = {
   // ---------------- PROLOGUE ----------------
@@ -1458,16 +1460,46 @@ export const hasScript = (nodeId) => Boolean(SCRIPT[nodeId])
 
 // 루트(동행)에 따라 달라지는 씬은 byRoute로 덮어쓴다.
 // 마지막 격벽 앞처럼 "누구와 여기까지 왔는가"가 장면 전체를 바꾸는 곳에 쓴다.
-function viewOf(scene, route) {
+//
+// 언어: 영어 본문(script.en.js)을 노드 id·선택 순서로 덮어쓴다. 효과·톤·다음 노드는
+// 언제나 한국어 SCRIPT에서 온다 — 영어 파일은 글만 가진다(로직이 언어별로 갈리지 않게).
+function viewOf(scene, route, lang = 'ko', nodeId) {
   const v = route && scene.byRoute && scene.byRoute[route]
-  return v ? { ...scene, ...v } : scene
+  let out = v ? { ...scene, ...v } : scene
+  const en = lang === 'en' && nodeId ? SCRIPT_EN[nodeId] : null
+  if (en) {
+    const enRoute = route && en.byRoute && en.byRoute[route]
+    out = {
+      ...out,
+      narration: (enRoute && enRoute.narration) ?? en.narration ?? out.narration,
+      line: (enRoute && enRoute.line) ?? en.line ?? out.line,
+      choices: out.choices.map((c, i) => {
+        const ec = en.choices?.[i]
+        return ec ? { ...c, text: ec.text ?? c.text, reaction: { ...c.reaction, ...(ec.reaction || {}) } } : c
+      }),
+    }
+  }
+  return out
+}
+
+// 표시 언어와 상관없이 선택을 찾는다 — 화면 문구로 먼저, 없으면 다른 언어의
+// 같은 자리(순서)로. 판 도중 언어를 바꿔도 클릭이 헛돌지 않게.
+function findChoice(raw, s, text, route, nodeId) {
+  const i = s.choices.findIndex((x) => x.text === text)
+  if (i >= 0) return s.choices[i]
+  for (const lang of ['ko', 'en']) {
+    const alt = viewOf(raw, route, lang, nodeId)
+    const j = alt.choices.findIndex((x) => x.text === text)
+    if (j >= 0) return s.choices[j]
+  }
+  return null
 }
 
 // 씬의 도입부를 모델 출력과 같은 형태의 beat으로 만든다.
-export function openingBeat(nodeId, route) {
+export function openingBeat(nodeId, route, lang = 'ko') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
-  const s = viewOf(raw, route)
+  const s = viewOf(raw, route, lang, nodeId)
   return {
     narration: s.narration,
     npc_name: s.npc,
@@ -1491,25 +1523,23 @@ export function openingBeat(nodeId, route) {
 // 떼면 클릭 수만 늘고 리듬이 죽는다. 다만 반응 대사가 사라지면 "선택이 달라져도
 // 글이 안 변한다"는 원래 문제로 되돌아가므로, 넘어갈 때는 반응 대사를 나레이션
 // 안에 화자 표기와 함께 남긴다.
-const KO_NAME = { Ren: '렌', Kael: '카엘', Echo: '에코', NEXUS: 'NEXUS' }
-
-export function choiceBeat(nodeId, choiceText, route) {
+export function choiceBeat(nodeId, choiceText, route, lang = 'ko') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
-  const s = viewOf(raw, route)
-  const c = s.choices.find((x) => x.text === choiceText)
+  const s = viewOf(raw, route, lang, nodeId)
+  const c = findChoice(raw, s, choiceText, route, nodeId)
   if (!c) return null
 
   const nextId = c.next || nodeId
   const advancing = Boolean(SCRIPT[nextId]) && nextId !== nodeId
-  const nextScene = advancing ? viewOf(SCRIPT[nextId], route) : null
+  const nextScene = advancing ? viewOf(SCRIPT[nextId], route, lang, nextId) : null
   const e = c.effects || {}
 
   let narration = c.reaction.narration
   if (advancing) {
     // 이 선택에 대한 상대의 반응을 잃지 않도록 나레이션에 붙여 넣는다.
     if (c.reaction.line) {
-      narration += `\n\n${KO_NAME[s.npc] || s.npc} — "${c.reaction.line}"`
+      narration += `\n\n${npcName(lang, s.npc)} — "${c.reaction.line}"`
     }
     narration += `\n\n${nextScene.narration}`
   }
@@ -1558,12 +1588,36 @@ const NUDGE = {
   },
 }
 
+const NUDGE_EN = {
+  NEXUS: {
+    narration: "Jayne's fingers stop in midair. That isn't something she can do here.",
+    line: 'Citizen Jayne. A meaningless action has been logged. Please stay within your options.',
+    emotion: 'Suspicious',
+  },
+  Ren: {
+    narration: 'Ren stops what he is doing and looks at Jayne. Then turns back to the terminal.',
+    line: "…That doesn't price out, Jayne. Let's talk about what's in front of us.",
+    emotion: 'Neutral',
+  },
+  Kael: {
+    narration: 'Kael does not answer. Only the fluorescent light keeps up its steady hum.',
+    line: 'Answer the question, broker. Time is not on your side.',
+    emotion: 'Suspicious',
+  },
+  Echo: {
+    narration: 'Echo raises an eyebrow. Her hand stays on the console.',
+    line: "Now? Do that later. There's only one thing to decide here.",
+    emotion: 'Threatening',
+  },
+}
+
 // 어느 선택지와도 맞지 않는 자유 입력에 대한 beat. 씬은 그대로 유지된다.
-export function nudgeBeat(nodeId, route) {
+export function nudgeBeat(nodeId, route, lang = 'ko') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
-  const s = viewOf(raw, route)
-  const n = NUDGE[s.npc] || NUDGE.NEXUS
+  const s = viewOf(raw, route, lang, nodeId)
+  const table = lang === 'en' ? NUDGE_EN : NUDGE
+  const n = table[s.npc] || table.NEXUS
   return {
     narration: n.narration,
     npc_name: s.npc,
@@ -1585,11 +1639,11 @@ export function nudgeBeat(nodeId, route) {
 // 씬을 진전시키지 않고 선택지도 그대로 둔다 — 대화는 장면을 소모하지 않는다.
 // (다만 추적 시계는 계속 돌기 때문에, 마냥 캐묻는 것도 공짜는 아니다.)
 // overrideLine: 자체 모델이 만든 답이 품질 게이트를 통과했을 때만 넘어온다.
-export function askBeat(nodeId, topic, route, overrideLine, seed = '') {
+export function askBeat(nodeId, topic, route, overrideLine, seed = '', lang = 'ko') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
-  const s = viewOf(raw, route)
-  const b = answerBeat(s.npc, topic, s, seed)
+  const s = viewOf(raw, route, lang, nodeId)
+  const b = answerBeat(s.npc, topic, s, seed, lang)
   return {
     ...b,
     ...(overrideLine ? { npc_response: overrideLine, narration: '' } : null),
@@ -1599,10 +1653,10 @@ export function askBeat(nodeId, topic, route, overrideLine, seed = '') {
 }
 
 // 증거 제시 beat(손으로 쓴 반응). AI 없이도 증거 기믹이 완결된다.
-export function evidenceScriptBeat(nodeId, verdict, route) {
+export function evidenceScriptBeat(nodeId, verdict, route, lang = 'ko') {
   const raw = SCRIPT[nodeId]
   if (!raw) return null
-  const s = viewOf(raw, route)
-  const b = evidenceBeat(s.npc, verdict, s)
+  const s = viewOf(raw, route, lang, nodeId)
+  const b = evidenceBeat(s.npc, verdict, s, lang)
   return { ...b, story_branch: nodeId, generated_choices: s.choices.map((x) => ({ text: x.text, tone: x.tone })) }
 }

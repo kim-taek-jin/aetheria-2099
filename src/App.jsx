@@ -21,8 +21,10 @@ import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import { IS_DEMO, isLockedNode, markLockedChoices } from './game/edition.js'
+import { LangContext, detectLang, saveLang, tr, npcName } from './i18n/index.js'
+import { sceneLabel, fragmentText, localizeFixedChoices } from './game/localize.js'
 import UpsellModal from './components/UpsellModal.jsx'
-import { RESIDUES, RESIDUE_FROM, residueChoicesFor, residueBeat, getResidue, recordResidue } from './game/residue.js'
+import { RESIDUE_FROM, residueChoicesFor, residueBeat, getResidue, recordResidue, residueLabel } from './game/residue.js'
 import {
   createNewGame,
   applyResponse,
@@ -103,14 +105,21 @@ export default function App() {
   const [evidenceMode, setEvidenceMode] = useState(false)
   const [audioOn, setAudioOn] = useState(false)
 
+  // 언어: 브라우저가 한국어면 한국어, 아니면 영어로 시작(itch.io 방문자 대부분이 영어권).
+  const [lang, setLang] = useState(detectLang)
+  const t = (key, vars) => tr(lang, key, vars)
+
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
   // 비트가 없을 때는 세이브가 있는 씬의 도입부를 쓴다.
   // 프롤로그로 고정하면 진행 중인 세이브를 불러왔을 때 화면과 상태가 어긋난다.
   const [beat, setBeat] = useState(() => {
+    const l = detectLang()
     const saved = storage.loadBeat()
-    if (saved) return saved
-    const node = storage.loadSave()?.currentNode || 'PROLOGUE_RAIN_01'
-    return openingBeat(node) || openingBeat('PROLOGUE_RAIN_01') || OPENING
+    // 저장된 비트가 다른 언어로 쓰였으면 그 씬의 도입부를 지금 언어로 다시 띄운다.
+    if (saved && (saved._lang || 'ko') === l) return saved
+    const sv = storage.loadSave()
+    const node = sv?.currentNode || 'PROLOGUE_RAIN_01'
+    return openingBeat(node, sv?.route, l) || openingBeat('PROLOGUE_RAIN_01', null, l) || OPENING
   })
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(null) // 로컬 생성 중 실시간 부분 텍스트
@@ -215,12 +224,16 @@ export default function App() {
   // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
   // 잔향 선택지는 손으로 쓴 장면의 평상 선택지 뒤에만 붙는다(분기·결말 노드 제외).
   // 체험판에선 잠긴 루트를 숨기지 않고 자물쇠를 채워 보여준다.
-  const fixedChoices = endingChoicesFor(save) || markLockedChoices(routeChoicesOf(save.currentNode))
+  const fixedChoices = localizeFixedChoices(
+    save.currentNode,
+    endingChoicesFor(save) || markLockedChoices(routeChoicesOf(save.currentNode)),
+    lang,
+  )
   const shownChoices =
     fixedChoices ||
     [
       ...(beat?.generated_choices || []),
-      ...(hasScript(save.currentNode) ? residueChoicesFor(save.currentNode, residueKnown, save.flags) : []),
+      ...(hasScript(save.currentNode) ? residueChoicesFor(save.currentNode, residueKnown, save.flags, lang) : []),
     ]
 
   // 잔향 획득 — 그 진실이 드러나는 장면에 들어선 순간 남는다.
@@ -230,7 +243,7 @@ export default function App() {
     const merged = recordResidue(id)
     setResidueKnown(merged.known)
     if (merged.isNew) {
-      setResidueMark(RESIDUES[id])
+      setResidueMark(id)
       const t = setTimeout(() => setResidueMark(null), 6000)
       return () => clearTimeout(t)
     }
@@ -283,12 +296,11 @@ export default function App() {
   }, [save])
 
   // Danger warning: an active human faction near the arrest threshold.
-  const NPC_KO = { Ren: '렌', Kael: '카엘', Echo: '에코' }
   const dangerNpc = useMemo(() => {
     if (save.failed || save.endingReached) return null
     for (const n of ['Ren', 'Kael', 'Echo']) {
       const s = save.relationships[n]?.suspicion ?? 0
-      if (s >= GATES.SUSPICION_HOSTILE) return { npc: n, ko: NPC_KO[n], suspicion: s }
+      if (s >= GATES.SUSPICION_HOSTILE) return { npc: n, suspicion: s }
     }
     return null
   }, [save])
@@ -327,14 +339,14 @@ export default function App() {
     //   하는 말 → 그 의도에 해당하는 장면이 전개된다.
     // 어느 쪽이든 화면에 나가는 글은 손으로 쓴 것이다. 모델은 "무엇을 묻는가/
     // 무엇을 하려는가"를 고르는 일만 한다 — 7B가 실제로 잘하는 일.
-    let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route) : null
+    let scripted = meta.fromChoice ? choiceBeat(save.currentNode, playerInput, save.route, lang) : null
     if (!scripted && meta.fromChoice && hasScript(save.currentNode)) {
       const sc = SCRIPT[save.currentNode]
-      const r = residueBeat(save.currentNode, playerInput, sc.choices)
+      const r = residueBeat(save.currentNode, playerInput, sc.choices, lang)
       if (r) scripted = { ...r, npc_name: sc.npc, background_tone: sc.tone || 'Normal' }
     }
     if (!scripted && meta.evidenceVerdict && hasScript(save.currentNode)) {
-      scripted = evidenceScriptBeat(save.currentNode, meta.evidenceVerdict, save.route)
+      scripted = evidenceScriptBeat(save.currentNode, meta.evidenceVerdict, save.route, lang)
     }
     if (!scripted && meta.freeform && hasScript(save.currentNode)) {
       const sig = abortRef.current.signal
@@ -351,6 +363,7 @@ export default function App() {
                 setting: sc?.setting,
                 question: playerInput,
                 isAction,
+                lang,
                 signal: sig,
                 backend: judge,
               },
@@ -363,19 +376,19 @@ export default function App() {
         // 어설프게 들어맞는 정답지보다 질문에 실제로 반응하는 쪽이 낫다.
         const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: !!judge, backend: judge })
         const line = topic ? null : await askModel(false)
-        scripted = askBeat(save.currentNode, topic, save.route, line, playerInput)
+        scripted = askBeat(save.currentNode, topic, save.route, line, playerInput, lang)
       } else {
         const idx = await resolveIntent({ text: playerInput, choices, signal: sig, useModel: !!judge, backend: judge })
         if (idx >= 0 && idx < choices.length) {
-          scripted = choiceBeat(save.currentNode, choices[idx].text, save.route)
+          scripted = choiceBeat(save.currentNode, choices[idx].text, save.route, lang)
         } else {
           // 예상 못한 행동. 확신 있는 주제면 그 답을, 아니면 모델이 반응한다.
           const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: !!judge, backend: judge })
           const line = topic ? null : await askModel(true)
           scripted =
             topic || line
-              ? askBeat(save.currentNode, topic, save.route, line, playerInput)
-              : nudgeBeat(save.currentNode, save.route)
+              ? askBeat(save.currentNode, topic, save.route, line, playerInput, lang)
+              : nudgeBeat(save.currentNode, save.route, lang)
         }
       }
     }
@@ -461,7 +474,7 @@ export default function App() {
     }
     nextSave.updatedAt = nowIso()
     setSave(nextSave)
-    setBeat(data)
+    setBeat({ ...data, _lang: lang })
     setDelta(computeDelta(save, nextSave, data)) // 선택의 결과를 눈에 보이게
     // 이 턴에 남긴 새 흔적(모델 flag/조각 또는 플레이어 canon)을 표시.
     const newFlags = Object.keys(nextSave.flags || {}).filter((f) => !save.flags?.[f])
@@ -526,6 +539,18 @@ export default function App() {
     ollamaIsAvailable().then(setOllamaOn).catch(() => {})
   }
 
+  // 언어 전환. 세이브는 언어와 무관하므로 그대로 두고, 지금 보이는 장면만
+  // 새 언어로 다시 띄운다(직전 반응문은 사라지고 장면 도입부가 나온다).
+  function toggleLang() {
+    const next = lang === 'en' ? 'ko' : 'en'
+    setLang(next)
+    saveLang(next)
+    if (hasScript(save.currentNode) && !save.endingReached) {
+      const b = openingBeat(save.currentNode, save.route, next)
+      if (b) setBeat({ ...b, _lang: next })
+    }
+  }
+
   function toggleAudio() {
     if (!audioOn) {
       enableAudio()
@@ -541,14 +566,14 @@ export default function App() {
   }
 
   function resetGame() {
-    if (!confirm('진행 상황을 초기화하고 프롤로그로 돌아갑니다. 계속?')) return
+    if (!confirm(t('resetConfirm'))) return
     startNewRun()
   }
 
   function startNewRun() {
     const fresh = withStamp(createNewGame())
     setSave(fresh)
-    setBeat(openingBeat('PROLOGUE_RAIN_01') || OPENING)
+    setBeat(openingBeat('PROLOGUE_RAIN_01', null, lang) || OPENING)
     storage.writeBeat(null) // 새 게임 — 저장된 비트 제거
     setShowEnding(false)
     setDemoIndex(-1)
@@ -557,6 +582,7 @@ export default function App() {
   }
 
   return (
+    <LangContext.Provider value={lang}>
     <div className="crt flex h-screen flex-col gap-2 p-2 sm:p-3" style={{ '--glitch': glitch }}>
       {/* ---- Top bar ---- */}
       <header className="flex items-center justify-between gap-2 px-1">
@@ -564,16 +590,23 @@ export default function App() {
           AETHERIA<span className="text-neon-magenta">::</span>2099
           {IS_DEMO && (
             <span className="ml-2 rounded border border-neon-amber/50 px-1.5 py-0.5 align-middle text-[9px] tracking-widest text-neon-amber">
-              체험판
+              {t('demoBadge')}
             </span>
           )}
         </h1>
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <IconBtn title="사운드" onClick={toggleAudio}>
+          <button
+            title={t('langToggleTitle')}
+            onClick={toggleLang}
+            className="neon-btn rounded border border-neon-cyan/30 px-1.5 py-1 text-[11px] font-bold text-neon-cyan/80 hover:text-neon-cyan"
+          >
+            {t('langToggle')}
+          </button>
+          <IconBtn title={t('sound')} onClick={toggleAudio}>
             {audioOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </IconBtn>
           <button
-            title={forceLocal ? '내 모델 전용 모드 (켜짐) — 클라우드 미사용' : '내 모델 전용 모드 (꺼짐)'}
+            title={forceLocal ? t('localOnlyOn') : t('localOnlyOff')}
             onClick={toggleForceLocal}
             className={`neon-btn rounded border p-1.5 ${
               forceLocal
@@ -583,16 +616,16 @@ export default function App() {
           >
             <Cpu size={15} />
           </button>
-          <IconBtn title="이야기 일지" onClick={() => setShowJournal(true)}>
+          <IconBtn title={t('journal')} onClick={() => setShowJournal(true)}>
             <ScrollText size={15} />
           </IconBtn>
-          <IconBtn title="기억 조각" onClick={() => setShowCodex(true)}>
+          <IconBtn title={t('codex')} onClick={() => setShowCodex(true)}>
             <BookLock size={15} />
           </IconBtn>
-          <IconBtn title="API 키" onClick={() => setShowKeyModal(true)}>
+          <IconBtn title={t('apiKey')} onClick={() => setShowKeyModal(true)}>
             <KeyRound size={15} />
           </IconBtn>
-          <IconBtn title="초기화" onClick={resetGame}>
+          <IconBtn title={t('reset')} onClick={resetGame}>
             <RotateCcw size={15} />
           </IconBtn>
         </div>
@@ -608,9 +641,9 @@ export default function App() {
               : 'border-cyan-500/15 text-cyan-300/55'
           }`}
         >
-          {guide.nearFinale && <span className="font-bold glitch-flicker">◈ 결말 분기 임박</span>}
-          <span>{guide.lead ? `▸ 우세 세력: ${NPC_KO[guide.lead]} (호감 ${guide.maxA})` : '▸ 세력 미정'}</span>
-          <span className="text-cyan-300/35">· 결말은 관계·추적·기억으로 갈린다</span>
+          {guide.nearFinale && <span className="font-bold glitch-flicker">{t('nearFinale')}</span>}
+          <span>{guide.lead ? t('leadFaction', { npc: npcName(lang, guide.lead), a: guide.maxA }) : t('noLead')}</span>
+          <span className="text-cyan-300/35">{t('endingsHint')}</span>
         </div>
       )}
 
@@ -619,7 +652,7 @@ export default function App() {
           onClick={() => setShowKeyModal(true)}
           className="neon-btn flex items-center justify-center gap-2 rounded border border-neon-magenta/40 bg-neon-magenta/10 py-1 text-[11px] tracking-widest text-neon-magenta"
         >
-          <KeyRound size={12} /> 오프라인 데모 모드 · 🔑 무료 키를 넣으면 AI 자유 대화 모드로 전환됩니다
+          <KeyRound size={12} /> {t('offlineDemo')}
         </button>
       )}
 
@@ -628,15 +661,13 @@ export default function App() {
           onClick={recheckLocal}
           className="neon-btn flex items-center justify-center gap-2 rounded border border-neon-amber/50 bg-neon-amber/10 py-1 text-[11px] tracking-widest text-neon-amber"
         >
-          <Cpu size={12} /> 내 모델 전용 모드 · Ollama 미실행 → 지금은 데모. Ollama 실행 후 여기를 눌러 재감지
+          <Cpu size={12} /> {t('localWanted')}
         </button>
       )}
 
       {usingLocal && (
         <div className="flex items-center justify-center gap-2 rounded border border-neon-green/40 bg-neon-green/10 py-1 text-[11px] tracking-widest text-neon-green">
-          {forceLocal
-            ? '🖥 내 모델 전용 모드 · 로컬 자체 모델로만 구동 · 오프라인 · 운영비 0'
-            : '🖥 로컬 자체 모델 구동 중 · 오프라인 · 운영비 0 (API 키 불필요)'}
+          {forceLocal ? t('localOnlyRunning') : t('localRunning')}
         </div>
       )}
 
@@ -647,31 +678,31 @@ export default function App() {
           onClick={() => setShowKeyModal(true)}
           className="w-full rounded border border-cyan-500/20 py-1 text-[11px] tracking-widest text-cyan-300/40 transition-colors hover:border-neon-cyan/40 hover:text-neon-cyan"
         >
-          🔑 API 키를 넣으면 자유 입력이 더 자유로워집니다 — 준비된 화제 밖의 질문에도 답합니다
+          {t('keyHint')}
         </button>
       )}
 
       {fellBack && (
         <div className="flex items-center justify-center gap-2 rounded border border-neon-amber/40 bg-neon-amber/10 py-1 text-[11px] tracking-widest text-neon-amber">
-          ☁→🖥 클라우드 한도 도달 — 자체 모델로 이어갑니다 (플레이 계속)
+          {t('fellBack')}
         </div>
       )}
 
       {/* 레일 위의 창발 — 플레이어 행동이 세계에 남긴 새 흔적(canon) 알림 */}
       {residueMark && (
         <div className="intro-up rounded border border-neon-amber/50 bg-neon-amber/10 px-3 py-1.5 text-center text-[11px] text-neon-amber">
-          <span className="font-bold tracking-widest">◈ 잔향이 남았다 — {residueMark.label}</span>
-          <span className="block text-[10px] text-neon-amber/70">
-            이 기억은 다음 판에도 남는다. 다른 길에서 새로운 선택지가 열린다.
-          </span>
+          <span className="font-bold tracking-widest">{t('residueGained', { label: residueLabel(residueMark, lang) })}</span>
+          <span className="block text-[10px] text-neon-amber/70">{t('residueGainedSub')}</span>
         </div>
       )}
 
       {canonMark && (
         <div className="intro-up flex items-center justify-center gap-2 rounded border border-neon-magenta/40 bg-neon-magenta/10 py-1 text-[11px] tracking-widest text-neon-magenta">
-          ✎ 세계에 흔적을 남겼다 —{' '}
+          {t('canonMark')}{' '}
           {canonMark.frags?.length
-            ? canonMark.frags[0].replace(/^기[록억] 조각[·:]?\s*/, '').slice(0, 42)
+            ? fragmentText(canonMark.frags[0], lang)
+                .replace(/^(기[록억] 조각|(Record|Memory) fragment)[^:]*:\s*/, '')
+                .slice(0, lang === 'en' ? 70 : 42)
             : canonMark.canon?.length
             ? canonMark.canon[0].slice(0, 42)
             : canonMark.flags.slice(0, 2).join(' · ')}
@@ -692,14 +723,14 @@ export default function App() {
                 : 'border-neon-red/60 bg-neon-red/10 text-neon-red'
             }`}
           >
-            {delta.evidence === 'hit' ? '◆ 증거 적중 ◆' : '✕ 빗나감 ✕'}
+            {delta.evidence === 'hit' ? t('evidenceHit') : t('evidenceMiss')}
           </div>
         </div>
       )}
 
       {dangerNpc && (
         <div className="flex items-center justify-center gap-2 rounded border border-neon-red/50 bg-neon-red/10 py-1 text-[11px] font-bold tracking-widest text-neon-red glitch-flicker">
-          <TriangleAlert size={13} /> 경고 // {dangerNpc.ko}의 의심 {dangerNpc.suspicion} — 임계 접근. 신중하지 않으면 체포된다.
+          <TriangleAlert size={13} /> {t('dangerWarn', { npc: npcName(lang, dangerNpc.npc), s: dangerNpc.suspicion })}
         </div>
       )}
 
@@ -731,16 +762,16 @@ export default function App() {
       <footer className="flex items-center justify-between px-1 text-[10px] text-cyan-300/40">
         <span className="flex items-center gap-1">
           <Save size={10} />
-          {SCENES[save.currentNode]
-            ? `[${SCENES[save.currentNode].act}] ${SCENES[save.currentNode].title}`
-            : save.currentNode}
+          {sceneLabel(save.currentNode, lang)}
         </span>
         <span>
           {save.endingReached
             ? `ENDING // ${save.endingReached}`
-            : `T${save.turnCount || 0} · 엔딩까지 약 ${remainingEstimate(save.currentNode, save.turnsOnNode).turns}턴 (~${
-                remainingEstimate(save.currentNode, save.turnsOnNode).minutes
-              }분)`}
+            : t('footerTurns', {
+                t: save.turnCount || 0,
+                turns: remainingEstimate(save.currentNode, save.turnsOnNode).turns,
+                mins: remainingEstimate(save.currentNode, save.turnsOnNode).minutes,
+              })}
         </span>
       </footer>
 
@@ -819,6 +850,7 @@ export default function App() {
         <FailureScreen failed={save.failed} save={save} onRestart={startNewRun} />
       )}
     </div>
+    </LangContext.Provider>
   )
 }
 

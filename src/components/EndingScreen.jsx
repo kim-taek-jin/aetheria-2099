@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { RotateCcw, BookLock, Trophy, Clock, Fingerprint } from 'lucide-react'
 import { SCENES } from '../game/scenes.js'
 import { ALL_ENDINGS, ENDING_COUNT, recordEnding } from '../game/collection.js'
-import { RESIDUES, RESIDUE_COUNT, getResidue } from '../game/residue.js'
+import { RESIDUES, RESIDUE_COUNT, getResidue, residueLabel } from '../game/residue.js'
 import CodeRain from './CodeRain.jsx'
+import { useLang, useT } from '../i18n/index.js'
+import { sceneTitle } from '../game/localize.js'
 
 // Per-ending visual identity: accent color, sigil, epigraph.
 const ENDING_STYLE = {
@@ -53,7 +55,24 @@ const ENDING_STYLE = {
 
 // Cinematic "jack-out" outro that bookends the intro (터미널 dossier 언어 일치).
 // 인트로: 파일 #00 복호화 → 세계가 거짓. 아웃트로: 세션 종료 → 네 선택이 남긴 세계.
-const OUTRO_LINES = ['> 잭아웃 시퀀스 개시…', '> 선택과 대가 · 기록 정리…']
+const OUTRO_KEYS = ['outro1', 'outro2']
+
+const EPIGRAPH_EN = {
+  ENDING_REN_MONOPOLY: 'Even freedom got a price tag.',
+  ENDING_KAEL_SILENCE: 'A peaceful city. A sealed sky.',
+  ENDING_ECHO_BREAKOUT: 'A broken cradle. The cost of a first breath.',
+  ENDING_NEXUS_TRUST: 'It chose not to cage us. It chose to trust.',
+  ENDING_JAYNE_ORIGIN: 'The name I lost — reclaimed at last.',
+  ENDING_SOLO_EXIT: "No one's side. My own road.",
+}
+const OUTRO_RESULT_EN = {
+  ENDING_REN_MONOPOLY: 'Memory market opened · the truth goes to the highest bidder',
+  ENDING_KAEL_SILENCE: 'Sky resealed · the city has its calm back',
+  ENDING_ECHO_BREAKOUT: 'Dome collapsed · the cradle breaks and a first breath begins',
+  ENDING_NEXUS_TRUST: 'Lockdown lifted · NEXUS chooses to trust humanity',
+  ENDING_JAYNE_ORIGIN: 'Subject #0 identified · erased name restored',
+  ENDING_SOLO_EXIT: 'No allegiance · walked out of the city alone',
+}
 
 // 결말별 "세계의 최종 기록" 한 줄(NEXUS 아카이브 결산).
 const OUTRO_RESULT = {
@@ -67,6 +86,10 @@ const OUTRO_RESULT = {
 
 // Staged reveal: outro log → 1 sigil+title glitch-in → 2 stats → 3 actions.
 export default function EndingScreen({ endingId, beat, save, onRestart, onCodex, isDemo = false, onUpsell }) {
+  const lang = useLang()
+  const t = useT()
+  const en = lang === 'en'
+  const OUTRO_LINES = OUTRO_KEYS.map((k) => t(k))
   const [stage, setStage] = useState(0)
   const [lines, setLines] = useState([])
   // Cross-run collection: record this ending, learn if it's newly discovered.
@@ -106,12 +129,12 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
       {stage === 0 && (
         <div className="intro-up font-pixel relative z-10 w-full max-w-md rounded border border-neon-cyan/30 bg-black/60 text-left shadow-[0_0_40px_rgba(34,227,255,0.08)]">
           <div className="flex items-center justify-between border-b border-neon-cyan/15 px-3 py-1.5 text-[10px] tracking-widest text-neon-cyan/70">
-            <span>NEXUS ARCHIVE // 기억 파일 #00 · 세션 종료</span>
-            <span className="flex items-center gap-1 text-neon-red/70">● <span className="text-cyan-300/40">봉인</span></span>
+            <span>{t('archiveHeader')}</span>
+            <span className="flex items-center gap-1 text-neon-red/70">● <span className="text-cyan-300/40">{t('sealed')}</span></span>
           </div>
           <div className="px-4 py-3 text-[12px] leading-relaxed sm:text-[13px]">
             <div className="mb-3 flex items-center gap-2 text-[10px] text-neon-green/70">
-              <span className="shrink-0">봉인</span>
+              <span className="shrink-0">{t('sealed')}</span>
               <div className="h-1 flex-1 overflow-hidden rounded bg-black/60">
                 <div className="h-full bg-neon-green transition-all duration-[1500ms]" style={{ width: `${Math.min(100, 30 + lines.length * 40)}%` }} />
               </div>
@@ -125,11 +148,11 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
             {lines.length >= OUTRO_LINES.length && (
               <>
                 <div className="cine-in mt-2 flex gap-2 border-t border-neon-green/20 pt-2 text-neon-green">
-                  <span className="w-12 shrink-0 whitespace-nowrap text-neon-green/80">[결말]</span>
-                  <span>{OUTRO_RESULT[endingId] || '기록 종료'}</span>
+                  <span className="w-12 shrink-0 whitespace-nowrap text-neon-green/80">{t('resultTag')}</span>
+                  <span>{(en ? OUTRO_RESULT_EN : OUTRO_RESULT)[endingId] || t('recordEnd')}</span>
                 </div>
                 <div className="cine-in mt-2 text-[12px] tracking-wider text-cyan-100/80">
-                  &gt; 기억 파일 봉인 완료.<span className="animate-pulse">▋</span>
+                  {t('fileSealed')}<span className="animate-pulse">▋</span>
                 </div>
               </>
             )}
@@ -147,9 +170,9 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
               <div className={`mb-2 text-[10px] tracking-[0.4em] ${style.accent}`}>◆ HIDDEN ENDING UNLOCKED ◆</div>
             )}
             <h2 className={`intro-title chroma mb-1 whitespace-nowrap text-2xl font-extrabold tracking-widest ${style.accent}`}>
-              {scene?.title || 'ENDING'}
+              {(scene && sceneTitle(endingId, lang)) || 'ENDING'}
             </h2>
-            <p className="mb-5 text-xs italic tracking-wider text-cyan-200/60">“{style.epigraph}”</p>
+            <p className="mb-5 text-xs italic tracking-wider text-cyan-200/60">“{(en && EPIGRAPH_EN[endingId]) || style.epigraph}”</p>
           <p className="mx-auto mb-6 max-w-md whitespace-pre-wrap text-sm leading-relaxed text-cyan-100">
             {beat?.npc_response}
           </p>
@@ -160,19 +183,19 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
           className={`mb-6 transition-opacity duration-700 ${stage >= 2 ? 'opacity-100' : 'opacity-0'}`}
         >
           <div className="grid grid-cols-3 gap-2 text-[11px]">
-            <Stat icon={<Clock size={13} />} label="플레이" value={`${save.turnCount || 0}턴 · ${mins}분`} />
+            <Stat icon={<Clock size={13} />} label={t('statPlay')} value={t('statPlayVal', { t: save.turnCount || 0, m: mins })} />
             <Stat
               icon={<Fingerprint size={13} />}
-              label="기억 조각"
-              value={`${save.fragments?.length || 0}개`}
+              label={t('statFragments')}
+              value={t('statFragmentsVal', { n: save.fragments?.length || 0 })}
             />
-            <Stat icon={<Trophy size={13} />} label="주요 세력" value={topNpc} />
+            <Stat icon={<Trophy size={13} />} label={t('statLead')} value={topNpc} />
           </div>
 
           {/* Ending collection — the cross-run completion loop (replay hook). */}
           <div className="mt-4 border-t border-cyan-500/10 pt-3">
             <div className="mb-2 text-[10px] tracking-[0.3em] text-cyan-300/45">
-              결말 수집 {col.discovered.length}/{ENDING_COUNT}
+              {t('collection', { n: col.discovered.length, total: ENDING_COUNT })}
               {col.isNew && <span className="ml-2 font-bold text-neon-green">◆ NEW</span>}
             </div>
             <div className="flex justify-center gap-2">
@@ -182,7 +205,7 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
                 return (
                   <span
                     key={e.id}
-                    title={got ? SCENES[e.id]?.title || e.id : '미발견'}
+                    title={got ? sceneTitle(e.id, lang) : t('undiscovered')}
                     className={`text-lg leading-none ${
                       got ? (isThis ? 'text-neon-green' : 'text-cyan-200/70') : 'text-cyan-500/20'
                     } ${isThis ? 'animate-pulse' : ''}`}
@@ -197,12 +220,12 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
           {/* 잔향 — 다음 판을 다르게 만드는 것. "다시 하면 뭐가 달라지는가"에 대한 답. */}
           <div className="mt-3 border-t border-cyan-500/10 pt-3 text-left">
             <div className="mb-1.5 text-center text-[10px] tracking-[0.3em] text-neon-amber/60">
-              잔향 {residue.length}/{RESIDUE_COUNT}
+              {t('residueCount', { n: residue.length, total: RESIDUE_COUNT })}
             </div>
             <ul className="space-y-1 text-[11px]">
-              {Object.entries(RESIDUES).map(([id, r]) => (
+              {Object.keys(RESIDUES).map((id) => (
                 <li key={id} className={residue.includes(id) ? 'text-neon-amber/85' : 'text-cyan-500/30'}>
-                  {residue.includes(id) ? `◈ ${r.label}` : '◇ 아직 보지 못한 진실이 다른 길에 있다'}
+                  {residue.includes(id) ? `◈ ${residueLabel(id, lang)}` : t('residueUnknown')}
                 </li>
               ))}
             </ul>
@@ -211,12 +234,12 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
                 onClick={onUpsell}
                 className="neon-btn mt-2 w-full rounded border border-neon-amber/50 bg-neon-amber/5 px-3 py-1.5 text-[11px] text-neon-amber"
               >
-                남은 잔향 {RESIDUE_COUNT - residue.length}개는 정식판의 카엘·에코의 길에 있다 →
+                {t('residueDemoUpsell', { n: RESIDUE_COUNT - residue.length })}
               </button>
             )}
             {!isDemo && residue.length > 0 && residue.length < RESIDUE_COUNT && (
               <p className="mt-1.5 text-center text-[10px] text-neon-amber/50">
-                제인은 잊었지만 당신은 기억한다. 다음 판에서 새로운 선택지가 열린다.
+                {t('residueReplay')}
               </p>
             )}
           </div>
@@ -233,7 +256,7 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
             className="neon-btn flex-1 rounded border border-neon-green/40 px-4 py-2 text-sm text-neon-green"
           >
             <span className="inline-flex items-center gap-1">
-              <BookLock size={14} /> 기억 조각 보기 ({save.fragments?.length || 0})
+              <BookLock size={14} /> {t('viewFragments', { n: save.fragments?.length || 0 })}
             </span>
           </button>
           <button
@@ -241,15 +264,15 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
             className="neon-btn flex-1 rounded border border-neon-cyan/50 bg-neon-cyan/10 px-4 py-2 text-sm font-bold text-neon-cyan"
           >
             <span className="inline-flex items-center gap-1">
-              <RotateCcw size={14} /> 다른 결말 보기
+              <RotateCcw size={14} /> {t('otherEnding')}
             </span>
           </button>
         </div>
 
         <p className="mt-5 text-[10px] tracking-widest text-cyan-300/30">
           {col.discovered.length >= ENDING_COUNT
-            ? 'AETHERIA::2099 — 모든 결말을 발견했다. 도시의 모든 진실이 당신의 것이다.'
-            : `AETHERIA::2099 — ${ENDING_COUNT - col.discovered.length}개의 결말이 아직 어둠 속에 있다.`}
+            ? t('allEndings')
+            : t('endingsLeft', { n: ENDING_COUNT - col.discovered.length })}
         </p>
       </div>
       )}

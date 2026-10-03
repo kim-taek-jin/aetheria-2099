@@ -150,26 +150,124 @@ export const RESIDUE_CHOICES = {
   ],
 }
 
+// ---- English ----
+export const RESIDUES_EN = {
+  ledger: {
+    label: "Ren's Ledger",
+    hint: "Ren doesn't sell the chip. He breaks dead people's memories into pieces and sells those. The courier's name was in his ledger.",
+  },
+  signature: {
+    label: 'The Signature on Floor 41',
+    hint: "Jayne's three years weren't lost. There was a signature on the order, and the desk behind it is on Floor 41 of the Core Spire.",
+  },
+  cutpoints: {
+    label: 'Seventeen Cut Points',
+    hint: "Echo's broadcast isn't about spreading the truth. It severs memory sync. The people who wake up lose their own names.",
+  },
+}
+
+// 선택 id → 영어 글. 효과·조건은 한국어 정의에서 온다.
+export const RESIDUE_CHOICES_EN = {
+  ledger_garage: {
+    text: "[Residue] Tell Ren the name on the third line of his ledger.",
+    reaction: {
+      narration:
+        "Jayne says a name. The garage noise doesn't change, but Ren's hands stop.\n\n" +
+        "He looks down at his terminal. Opens the ledger. The third line is empty. " +
+        "No one has sold that memory yet. Not even Ren knows that name yet.",
+      line: "…Where'd you hear that name? It's not on the market. It's not even in my ledger yet. Did you read my books before I did?",
+    },
+  },
+  ledger_martyr: {
+    text: "[Residue] Tell her these names are being sold in Ren's ledger.",
+    reaction: {
+      narration:
+        'Echo turns toward the candles. She touches the twelve names one by one. ' +
+        'At the third, her hand stops.\n\n' +
+        "She stands there a long time. Wax drips onto the back of her hand and she doesn't pull it away.",
+      line: "…So they put a price on you even after you're dead. I fought to remember these people, and someone was remembering them so they could sell them.",
+    },
+  },
+  signature_decrypt: {
+    text: '[Residue] Enter "Floor 41" as the decryption key.',
+    reaction: {
+      narration:
+        'The screen goes white for a moment. Then, instead of a rejection, a single sentence appears.\n\n' +
+        '— Authorizer access is not permitted from this terminal. This attempt has been logged.\n\n' +
+        'A wrong key should have returned "error." The system didn\'t say error. It knows what Floor 41 is.',
+      line: 'Citizen Jayne. That level does not exist. How do you know of a level that does not exist?',
+    },
+  },
+  signature_backroom: {
+    text: '[Residue] Ask Ren if he has ever dealt with Floor 41.',
+    reaction: {
+      narration:
+        "Ren folds the contract. He doesn't smile. He checks that the back-room door is shut, then lowers his voice.\n\n" +
+        'At the bottom of the ledger he pulls up, there is one buyer. No name. Just the number 41.',
+      line: "…My biggest client. Pays top price for the memories I split. Never asked why. Not asking was part of the price. …So how do you know that number?",
+    },
+  },
+  cutpoints_holding: {
+    text: '[Residue] Tell him what Echo is about to do — before she does it.',
+    reaction: {
+      narration:
+        "Jayne tells him. Not a broadcast — a severing. The people who wake up will lose their own names.\n\n" +
+        "Kael sets down his coffee. He knows stopping it is his job. " +
+        'And for the first time, the job feels right — which is exactly what makes him uneasy.',
+      line: "…Why tell me? You just sold out the rebels. Or — did you just save those people? Do you know which?",
+    },
+  },
+  cutpoints_core: {
+    text: '[Residue] Ask NEXUS what remains if the sync is cut.',
+    reaction: {
+      narration: 'The lights in the corridor to the core dim one step. The answer is slow. NEXUS has never answered slowly before.',
+      line: 'What remains is what you threw away. I was carrying it for you. If I set it down, no one will pick it up. …Do you still want me to set it down?',
+    },
+  },
+}
+
+// 잔향 조각(저장은 한국어 원문, 표시만 영어).
+export const RESIDUE_FRAGMENTS_EN = {
+  '기록 조각 · 잔향: 렌은 아직 사지 않은 기억의 주인 이름을 들었다. 그는 처음으로 제인을 시세표가 아니라 위험으로 봤다.':
+    "Record fragment · Residue: Ren heard the name of a memory he hadn't even bought yet. For the first time he saw Jayne not as a price list, but as a threat.",
+  '기록 조각 · 잔향: NEXUS는 41층을 "존재하지 않는다"고 했다. 존재하지 않는 것을 지키느라 경보까지 울렸다.':
+    'Record fragment · Residue: NEXUS said Floor 41 "does not exist." It still sounded an alarm to protect the thing that doesn\'t exist.',
+  '기록 조각 · 잔향: 렌이 쪼갠 기억을 가장 비싸게 사는 곳은 41층이었다. 지우는 자와 파는 자가 같은 장부에 있었다.':
+    "Record fragment · Residue: The highest bidder for Ren's split memories was Floor 41. The ones who erase and the one who sells were in the same ledger.",
+  '기록 조각 · 잔향: NEXUS는 "대신 들고 있었다"고 했다. 감시가 아니라 짐이라는 말투였다.':
+    'Record fragment · Residue: NEXUS said it had been "carrying it for you." Not surveillance — it spoke of it like a burden.',
+}
+
+export const residueLabel = (id, lang = 'ko') => (lang === 'en' ? RESIDUES_EN[id]?.label : RESIDUES[id]?.label) || id
+
 export const usedFlag = (choiceId) => `residue_used_${choiceId}`
 
 // 순수: 이 장면에서 지금 열리는 잔향 선택지(아는 잔향 + 이번 판에 아직 안 쓴 것).
-export function residueChoicesFor(nodeId, known, flags = {}) {
+export function residueChoicesFor(nodeId, known, flags = {}, lang = 'ko') {
   const list = RESIDUE_CHOICES[nodeId] || []
   const k = new Set(known || [])
   return list
     .filter((c) => k.has(c.requires) && !flags[usedFlag(c.id)])
-    .map((c) => ({ text: c.text, tone: c.tone, residue: true }))
+    .map((c) => ({
+      text: (lang === 'en' && RESIDUE_CHOICES_EN[c.id]?.text) || c.text,
+      tone: c.tone,
+      residue: true,
+    }))
 }
 
 // 순수: 잔향 선택의 결과 beat. 씬은 제자리 — 남은 선택지는 원래 장면의 것.
-export function residueBeat(nodeId, choiceText, sceneChoices) {
-  const c = (RESIDUE_CHOICES[nodeId] || []).find((x) => x.text === choiceText)
+export function residueBeat(nodeId, choiceText, sceneChoices, lang = 'ko') {
+  // 어느 언어의 문구로 눌렀든 같은 선택을 찾는다.
+  const c = (RESIDUE_CHOICES[nodeId] || []).find(
+    (x) => x.text === choiceText || RESIDUE_CHOICES_EN[x.id]?.text === choiceText,
+  )
   if (!c) return null
   const e = c.effects || {}
+  const r = (lang === 'en' && RESIDUE_CHOICES_EN[c.id]?.reaction) || c.reaction
   return {
-    narration: c.reaction.narration,
+    narration: r.narration,
     npc_name: undefined, // 호출자가 채운다(씬 화자)
-    npc_response: c.reaction.line,
+    npc_response: r.line,
     npc_emotion: c.reaction.emotion || 'Neutral',
     suspicion_change: e.suspicion || 0,
     affinity_change: e.affinity || 0,
