@@ -454,7 +454,7 @@ export const SCRIPT = {
         },
         effects: { affinity: 10, suspicion: -3 },
         rivalEffects: { npc: 'Kael', affinity_change: -6, suspicion_change: 14 },
-        next: 'ACT2_REN_AUCTION_02',
+        next: 'ACT2_REN_LEDGER_01',
       },
       {
         text: '[솔직하게] 카엘의 회선에 대답한다.',
@@ -470,7 +470,7 @@ export const SCRIPT = {
         },
         effects: { affinity: -4, suspicion: 7 },
         rivalEffects: { npc: 'Kael', affinity_change: 12, suspicion_change: -8 },
-        next: 'ACT2_REN_AUCTION_02',
+        next: 'ACT2_REN_LEDGER_01',
       },
       {
         text: '[도발] 30%는 헐값이라고 판을 흔든다.',
@@ -484,6 +484,67 @@ export const SCRIPT = {
         },
         effects: { affinity: 2, suspicion: 6, heat: 2 },
         rivalEffects: { npc: 'Kael', suspicion_change: 10 },
+        next: 'ACT2_REN_LEDGER_01',
+      },
+    ],
+  },
+
+  ACT2_REN_LEDGER_01: {
+    tone: 'Normal',
+    npc: 'Ren',
+    emotion: 'Neutral',
+    narration:
+      '렌이 낙찰자를 배웅하러 나간 사이, 뒷방에는 물 끓는 소리와 단말의 팬 소리만 남는다. ' +
+      '화면은 잠기지 않았다. 띄워져 있는 건 지분 계약서가 아니라 장부다.\n\n' +
+      '품목란에 적힌 것이 물건이 아니다. 이름이다. 그 옆에 단가가 있고, 그 옆에 상태가 있다 — ' +
+      '"보관", "분할 대기", "분할 완료". 세 번째 줄에서 제인의 눈이 멈춘다.\n\n' +
+      '칩을 쥐고 죽은 그 배달원의 이름이다. 상태는 분할 대기. 단가는 커피 두 잔 값이다.',
+    line: '',
+    choices: [
+      {
+        text: '[조사] 장부를 끝까지 읽는다.',
+        tone: 'Investigate',
+        reaction: {
+          narration:
+            '제인은 스크롤을 내린다. 마흔한 줄. 전부 죽은 사람이고, 전부 값이 매겨져 있다. ' +
+            '화면 구석에서 접속 기록 표시등이 조용히 깜빡인다 — 누가 봤는지, 언제 봤는지가 남는다는 뜻이다.\n\n' +
+            '문이 열린다. 렌은 화면을 보고, 제인을 보고, 그리고 의자에 앉는다. 변명하는 사람의 자세가 아니다.',
+          line:
+            '기억은 주인이 죽으면 임자가 없어. 난 임자 없는 걸 파는 거야. ' +
+            '그게 도둑질로 보이면, 넌 아직 이 도시에서 굶어본 적이 없는 거고.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: -3, heat: 5 },
+        next: 'ACT2_REN_AUCTION_02',
+      },
+      {
+        text: '[은신] 못 본 것으로 하고 화면을 닫는다.',
+        tone: 'Stealth',
+        reaction: {
+          narration:
+            '제인은 장부를 닫고 계약서를 다시 띄워둔다. 손끝이 식는다. ' +
+            '렌이 들어와 커피를 내려놓고, 화면을 한 번 보고, 아무 말도 하지 않는다.\n\n' +
+            '그 침묵이 계산인지 배려인지 제인은 구분하지 못한다. 어쩌면 렌 자신도.',
+          line: '…식기 전에 마셔. 오늘은 네가 번 돈으로 산 거야. 그 정도 지분은 되잖아.',
+          emotion: 'Friendly',
+        },
+        effects: { affinity: 6, suspicion: -4 },
+        next: 'ACT2_REN_AUCTION_02',
+      },
+      {
+        text: '[도발] 돌아온 렌에게 장부를 들이댄다.',
+        tone: 'Aggressive',
+        reaction: {
+          narration:
+            '제인이 화면을 돌려놓는다. 세 번째 줄을 손가락으로 짚는다. ' +
+            '렌은 이름을 본다. 그리고 처음으로, 숫자가 아니라 사람을 본 얼굴을 한다 — 아주 잠깐.\n\n' +
+            '그는 커피를 내려놓고 단가 칸을 지운다. 지우고 다시 쓴다. 같은 숫자다.',
+          line:
+            '…이 사람 값을 올려주면 네 기분이 나아지나? 그건 애도가 아니라 흥정이야, 제인. ' +
+            '나는 흥정은 해도 거짓말은 안 해.',
+          emotion: 'Suspicious',
+        },
+        effects: { affinity: -7, suspicion: 8 },
         next: 'ACT2_REN_AUCTION_02',
       },
     ],
@@ -509,7 +570,7 @@ export const SCRIPT = {
           emotion: 'Friendly',
         },
         effects: { affinity: 12, heat: 6 },
-        next: 'ACT3_CORE_APPROACH_01',
+        next: 'ACT2_REN_SPLIT_01',
       },
       {
         text: '[은신] 난장판을 틈타 원본 칩을 챙겨 사라진다.',
@@ -522,7 +583,7 @@ export const SCRIPT = {
           emotion: 'Suspicious',
         },
         effects: { affinity: -6, suspicion: 8, heat: -3 },
-        next: 'ACT3_CORE_APPROACH_01',
+        next: 'ACT2_REN_SPLIT_01',
       },
       {
         text: '[조사] 그의 비밀 함을 열어 안의 것을 꺼낸다.',
@@ -535,6 +596,64 @@ export const SCRIPT = {
           emotion: 'Threatening',
         },
         effects: { affinity: 4, suspicion: 6, heat: 4 },
+        next: 'ACT2_REN_SPLIT_01',
+      },
+    ],
+  },
+
+  ACT2_REN_SPLIT_01: {
+    tone: 'Danger',
+    npc: 'Ren',
+    emotion: 'Neutral',
+    narration:
+      '하수관 아래 임시 거처. 머리 위로 물이 지나가는 소리가 일정하게 들린다. ' +
+      '뒷방도, 단말도, 낙찰 데이터도 오늘 밤에 전부 잃었다.\n\n' +
+      '렌이 가방에서 장비 하나를 꺼낸다. 분할기다. 그는 배달원의 기억을 올리고 작업 시간을 맞춘다. ' +
+      '4분. 그동안 그는 제인을 한 번도 쳐다보지 않는다.',
+    line: '오늘 잃은 게 얼마인지 알아? 네가 옳은 소리 하는 동안 우리 둘 다 굶어. 나는 그걸 셈하는 사람이고.',
+    choices: [
+      {
+        text: '[솔직하게] 분할기를 덮어 끈다.',
+        tone: 'Honest',
+        reaction: {
+          narration:
+            '제인이 손바닥으로 전원을 누른다. 장비가 작아지는 소리를 내며 꺼진다. ' +
+            '렌은 화내지 않는다. 화낼 기운도 없는 사람처럼 장비를 접어 가방에 넣는다.\n\n' +
+            '그리고 둘은 오늘 밤 갈 곳이 없다는 사실을 동시에 안다. 아무도 그 말을 꺼내지 않는다.',
+          line: '…알았어. 그럼 오늘은 굶는 걸로 하자. 내일 값은 내일 치자고.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: 9, heat: -3 },
+        next: 'ACT3_CORE_APPROACH_01',
+      },
+      {
+        text: '[은신] 아무 말 없이 4분을 지켜본다.',
+        tone: 'Stealth',
+        reaction: {
+          narration:
+            '분할기 소리는 생각보다 조용하다. 사람 하나가 조각나는 데 4분이면 충분하다. ' +
+            '끝나자 렌의 단말에 현금이 들어오고, 장부의 세 번째 줄이 "분할 완료"로 바뀐다.\n\n' +
+            '렌이 돈의 절반을 제인 쪽으로 민다. 제인은 그것을 받는 손이 자기 손이라는 걸 본다.',
+          line: '반이야. 지켜본 것도 일이니까. …이제 너도 장부에 올라간 셈이다, 제인.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: 4, suspicion: 6, heat: 2 },
+        next: 'ACT3_CORE_APPROACH_01',
+      },
+      {
+        text: '[도발] 그 사람 이름을 소리 내어 부른다.',
+        tone: 'Aggressive',
+        reaction: {
+          narration:
+            '제인이 배달원의 이름을 말한다. 한 번. 좁은 공간에서 이름은 이상하게 크게 울린다. ' +
+            '렌의 손이 멈춘다. 그는 화면의 이름을 보고, 자기 손을 보고, 작업을 취소한다.\n\n' +
+            '취소 버튼을 누르는 데 걸린 시간이 4분보다 길었다.',
+          line:
+            '…이름으로 부르지 마. 이름이 붙으면 값을 못 매겨. 값을 못 매기면 나는 아무것도 못 하는 사람이 돼. ' +
+            '너는 지금 내 손을 묶은 거야.',
+          emotion: 'Threatening',
+        },
+        effects: { affinity: 2, suspicion: 9 },
         next: 'ACT3_CORE_APPROACH_01',
       },
     ],
