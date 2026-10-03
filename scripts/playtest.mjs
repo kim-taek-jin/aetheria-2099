@@ -16,10 +16,11 @@ const OUT = process.env.OUT || 'playtest-report.json'
 const STRATEGIES = [
   // 결말 선택지 라벨(봉인/파괴/거래/이탈/각성)도 포함 — 없으면 전략이 결말을
   // 못 고르고 목록 첫 항목으로 흘러 분포 측정이 무의미해진다.
-  { name: '정직·질서', prefer: ['봉인', '자수', '솔직', '조사'] },
-  { name: '공격·폭로', prefer: ['파괴', '폭로', '도발', '위협', '해킹'] },
-  { name: '은신·잠행', prefer: ['이탈', '은신', '도주'] },
-  { name: '거래·실리', prefer: ['거래', '기만', '거짓말', '조사'] },
+  // 영어판 라벨도 함께 — 플레이테스트를 어느 언어로 돌려도 같은 전략이 된다.
+  { name: '정직·질서', prefer: ['봉인', '자수', '솔직', '조사', 'Seal', 'Surrender', 'Honest', 'Investigate'] },
+  { name: '공격·폭로', prefer: ['파괴', '폭로', '도발', '위협', '해킹', 'Destroy', 'Expose', 'Provoke', 'Attack', 'Hack'] },
+  { name: '은신·잠행', prefer: ['이탈', '은신', '도주', 'Leave', 'Stealth', 'Flee'] },
+  { name: '거래·실리', prefer: ['거래', '기만', '거짓말', '조사', 'Deal', 'Deceive', 'Lie', 'Investigate'] },
   { name: '무작위', prefer: [] },
 ]
 
@@ -34,7 +35,11 @@ await page.evaluate(() => {
   localStorage.setItem('aetheria2099.introSeen', '1')
   localStorage.setItem('aetheria2099.tutorialSeen', '1')
   localStorage.setItem('aetheria2099.audio', '0')
-})
+}, null)
+// 플레이할 언어(기본 한국어). PLAYTEST_LANG=en 이면 영어판을 돈다.
+await page.evaluate((l) => localStorage.setItem('aetheria2099.lang', l), process.env.PLAYTEST_LANG || 'ko')
+await page.reload({ waitUntil: 'domcontentloaded' })
+await page.waitForSelector('button')
 
 const readSave = () => page.evaluate(() => JSON.parse(localStorage.getItem('aetheria2099.save.v1') || '{}'))
 const choiceButtons = () => page.locator('button').filter({ hasText: '[' })
