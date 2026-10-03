@@ -31,3 +31,5 @@ trailer-assets/
 
 # BGM 에셋(사용자가 Suno 등으로 생성) — 리포에 커밋하지 않음
 public/music/*.mp3
+release
+release.old-*
