@@ -148,3 +148,38 @@ describe('beat이 언어를 따른다', () => {
     expect(evidenceBeat('Echo', 'hit', null, 'en').npc_response).toBe(EVIDENCE_REACT_EN.Echo.hit.line)
   })
 })
+
+import { classifyByKeyword, answerPassesGate } from '../src/services/intent.js'
+
+describe('영어 행동 분류(모델 없이)', () => {
+  const CH = [
+    { text: '[Honest] Tell him the truth.', tone: 'Honest' },
+    { text: '[Lie] Say you found it in the trash.', tone: 'Deceptive' },
+    { text: '[Provoke] Threaten to walk.', tone: 'Aggressive' },
+  ]
+  it('정직·거짓·도발을 영어로 구분한다', () => {
+    expect(classifyByKeyword('I confess everything to Ren', CH)).toBe(0)
+    expect(classifyByKeyword('I lie and say it was garbage', CH)).toBe(1)
+    expect(classifyByKeyword('I threaten him', CH)).toBe(2)
+  })
+  it('엉뚱한 영어 행동은 -1', () => {
+    expect(classifyByKeyword('I start dancing', CH)).toBe(-1)
+  })
+  it('부분 단어로 잡지 않는다("run" ≠ "brunch")', () => {
+    expect(classifyByKeyword('we had brunch', [{ text: '[Flee] x', tone: 'Flee' }])).toBe(-1)
+  })
+})
+
+describe('영어 답변 게이트', () => {
+  it('자연스러운 영어 대사는 통과', () => {
+    expect(answerPassesGate("Weather doesn't price out, Jayne. Ask me about the chip.", null, 'en')).toBe(true)
+  })
+  it('지시 누출·JSON·한글 섞임은 탈락', () => {
+    expect(answerPassesGate('Answer briefly: the chip is mine.', null, 'en')).toBe(false)
+    expect(answerPassesGate('{"npc_response": "hi"}', null, 'en')).toBe(false)
+    expect(answerPassesGate('The chip is 값진 thing, Jayne.', null, 'en')).toBe(false)
+  })
+  it('한국어 게이트는 그대로', () => {
+    expect(answerPassesGate('날씨 같은 건 값이 안 나와. 칩 얘기나 하자.', null, 'ko')).toBe(true)
+  })
+})

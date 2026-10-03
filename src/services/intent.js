@@ -86,6 +86,18 @@ const TONE_WORDS = {
   Flee: ['도주', '도망', '튄다', '달린다', '빠져나', '벗어난'],
 }
 
+// 영어 입력용. 단어 단위로 맞춘다("run"이 "brunch"에 걸리지 않게).
+const TONE_WORDS_EN = {
+  Honest: ['honest', 'truth', 'confess', 'admit', 'tell the truth', 'come clean', 'level with'],
+  Deceptive: ['lie', 'deceive', 'bluff', 'pretend', 'trick', 'fake', 'make up', 'mislead'],
+  Aggressive: ['threaten', 'provoke', 'insult', 'attack', 'punch', 'yell', 'mock', 'taunt', 'challenge'],
+  Investigate: ['investigate', 'look', 'search', 'examine', 'check', 'inspect', 'read', 'ask', 'study'],
+  Hack: ['hack', 'breach', 'crack', 'jack in', 'override', 'decrypt'],
+  Stealth: ['hide', 'sneak', 'quietly', 'slip', 'back away', 'stay low', 'stealth'],
+  Flee: ['run', 'flee', 'escape', 'bolt', 'get out', 'leave'],
+}
+const wordHit = (t, w) => new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(t)
+
 // 모델 없이 쓰는 규칙 기반 분류(오프라인·폴백).
 export function classifyByKeyword(text, choices) {
   const t = String(text || '')
@@ -94,10 +106,13 @@ export function classifyByKeyword(text, choices) {
   choices.forEach((c, i) => {
     const words = TONE_WORDS[c.tone] || []
     let score = words.reduce((n, w) => n + (t.includes(w) ? 1 : 0), 0)
+    score += (TONE_WORDS_EN[c.tone] || []).reduce((n, w) => n + (wordHit(t, w) ? 1 : 0), 0)
     // 선택지 문구 자체와 겹치는 명사도 약하게 점수를 준다.
     const label = (c.text.match(/\]\s*(.*)$/) || [, ''])[1]
     for (const chunk of label.split(/[\s,.]+/)) {
-      if (chunk.length >= 2 && t.includes(chunk)) score += 0.5
+      // 영어 라벨의 관사·전치사가 점수를 주지 않게 3글자 이상, 대소문자 무시.
+      const latin = /^[a-z']+$/i.test(chunk)
+      if (latin ? chunk.length >= 4 && wordHit(t, chunk.toLowerCase()) : chunk.length >= 2 && t.includes(chunk)) score += 0.5
     }
     if (score > bestScore) {
       bestScore = score
@@ -199,11 +214,13 @@ const ANSWER_MAX = 110
 // 프롬프트 지시가 답변에 새어 나오는 패턴. 모델이 자기가 받은 명령을 그대로
 // 뱉는 일이 잦다("…짧게만 답해", "다시 묻지 마라", "설명하지 않는다").
 const INSTRUCTION_LEAK = /짧게|한 문장|한두 문장|답하라|답해라|설명하지|지어내지|따옴표|대사만|묻지 ?마라|모르면/
+const INSTRUCTION_LEAK_EN = /one sentence|two sentences|answer briefly|in character|do not explain|don't explain|no quotes|dialogue only|don't make up|do not invent|as an ai|if you don't know/i
 
 // 화면에 내보내도 되는 답인가. 하나라도 걸리면 쓰지 않는다.
 // 구조적 결함만 잡을 수 있고 "말이 되는가"는 못 잡는다 — 그건 모델의 몫이다.
-export function answerPassesGate(text, hasGarbleFn) {
+export function answerPassesGate(text, hasGarbleFn, lang = 'ko') {
   const t = String(text || '').trim()
+  if (lang === 'en') return englishAnswerPasses(t)
   if (t.length < ANSWER_MIN || t.length > ANSWER_MAX) return false
   if (/[{}\[\]"]|npc_|_change|story_branch/.test(t)) return false // JSON 누출
   if (/(.)\1{3,}|[*#~`|]/.test(t)) return false // 같은 문자 반복·마크다운 기호(디코딩 붕괴 신호)
@@ -217,12 +234,28 @@ export function answerPassesGate(text, hasGarbleFn) {
   return hangul / t.length >= 0.55
 }
 
+// 영어 답의 게이트. 한국어용 hasGarble은 쓰지 않는다 — 그건 "한국어 문장 속
+// 영어 조각"을 깨짐으로 보는 규칙이라 영어 답 전체를 떨어뜨린다.
+function englishAnswerPasses(t) {
+  if (t.length < 8 || t.length > 240) return false
+  if (/[{}\[\]"]|npc_|_change|story_branch/.test(t)) return false
+  if (/(.)\1{3,}|[*#~`|]/.test(t)) return false
+  if (/\n/.test(t)) return false
+  if (INSTRUCTION_LEAK_EN.test(t)) return false
+  if (/[가-힣㐀-䶿一-鿿]/.test(t)) return false // 한글·한자가 섞이면 실패
+  const sentences = t.split(/[.!?…]+/).filter((x) => x.trim().length > 1)
+  if (sentences.length > 3) return false
+  const latin = (t.match(/[A-Za-z]/g) || []).length
+  return latin / t.length >= 0.6
+}
+
 export async function answerWithModel({
   npc,
   voice,
   setting,
   question,
   isAction = false,
+  lang = 'ko',
   temperature = 0.6,
   signal,
   backend,
@@ -234,7 +267,16 @@ export async function answerWithModel({
     ? `플레이어(제인)가 방금 한 행동에 ${npc}가 보일 반응을 한국어 한 문장으로만 써라.`
     : `플레이어(제인)의 질문에 ${npc}의 목소리로 한국어 한두 문장으로만 답하라.`
   const label = isAction ? '제인의 행동' : '질문'
-  const prompt = `너는 사이버펑크 게임 "Aetheria 2099"의 등장인물 ${npc}이다.
+  const prompt =
+    lang === 'en'
+      ? `You are ${npc}, a character in the cyberpunk game "Aetheria 2099".
+${voice ? `Voice (in Korean, keep the attitude): ${voice}\n` : ''}${setting ? `Current scene (in Korean): ${setting}\n` : ''}
+${isAction ? `Write ${npc}'s reaction to what Jayne just did, in ONE English sentence.` : `Answer Jayne's question in ${npc}'s voice, in one or two English sentences.`}
+Write only the spoken line, no quotation marks, no narration. Do not invent new lore.
+
+${isAction ? "Jayne's action" : 'Question'}: ${question}
+${npc}:`
+      : `너는 사이버펑크 게임 "Aetheria 2099"의 등장인물 ${npc}이다.
 ${voice ? `말투: ${voice}\n` : ''}${setting ? `지금 장면: ${setting}\n` : ''}
 ${task}
 따옴표 없이 대사만 쓴다. 설명하지 않는다. 새 설정을 지어내지 않는다.
@@ -248,7 +290,7 @@ ${npc}:`
     topP: 0.9,
     maxTokens: 80,
     repeatPenalty: 1.15,
-    stop: ['\n\n', '질문:', '제인의 행동:', '제인:'],
+    stop: lang === 'en' ? ['\n\n', 'Question:', "Jayne's action:", 'Jayne:'] : ['\n\n', '질문:', '제인의 행동:', '제인:'],
     signal,
     backend,
     url,
@@ -262,7 +304,7 @@ ${npc}:`
 export async function answerWithModelGated(opts, hasGarbleFn) {
   for (const temperature of [0.6, 0.35]) {
     const raw = await answerWithModel({ ...opts, temperature })
-    if (answerPassesGate(raw, hasGarbleFn)) return raw
+    if (answerPassesGate(raw, hasGarbleFn, opts.lang)) return raw
   }
   return null
 }
