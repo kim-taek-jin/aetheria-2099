@@ -58,6 +58,7 @@ npm install && npm run dev
 npm test         # 189개 — 서사 정합성·상태머신·분류 폴백·품질 게이트
 npm run validate # 씬 그래프 검증(끊긴 링크·enum·도달 불가 노드)
 npm run build    # 정적 빌드(dist/, 약 2.4MB)
+npm run build:demo  # 체험판 빌드(dist-demo/) — 렌의 길 하나 + 결말, 카엘·에코는 잠긴 길로 표시
 ```
 
 ---
@@ -119,6 +120,7 @@ Claude를 교사로 `(입력→정제 JSON)` 학습쌍을 모아 Qwen2.5-7B를 Q
 | 엔딩 게이트(루트·관계·기억이 6종 결정) | `scenes.js` `eligibleEndings` | 클라이언트 |
 | 증거 추리(씬의 약점 ↔ 조각 매칭) | `scenes.js` `judgeEvidence` | 클라이언트 |
 | 잔향 — 다른 루트에서 본 진실이 다음 판의 선택지를 연다(3종 × 2곳) | `game/residue.js` | **사람** · 회차 간 저장 |
+| 체험판/정식판 — 같은 코드, 빌드 모드로 분리. 잠긴 길은 숨기지 않고 보여준다 | `game/edition.js` | 빌드 시점 |
 | 본편 서사(24씬 · 선택별 반응 · 동행별 분기) | `game/script.js` | **사람** |
 | 질의응답(화자 4 × 주제 20) | `game/answers.js` | **사람** |
 | 자유 입력 의도·주제 판별 | `services/intent.js` | **모델** |

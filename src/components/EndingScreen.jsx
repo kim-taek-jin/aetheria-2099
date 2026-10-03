@@ -66,7 +66,7 @@ const OUTRO_RESULT = {
 }
 
 // Staged reveal: outro log → 1 sigil+title glitch-in → 2 stats → 3 actions.
-export default function EndingScreen({ endingId, beat, save, onRestart, onCodex }) {
+export default function EndingScreen({ endingId, beat, save, onRestart, onCodex, isDemo = false, onUpsell }) {
   const [stage, setStage] = useState(0)
   const [lines, setLines] = useState([])
   // Cross-run collection: record this ending, learn if it's newly discovered.
@@ -206,7 +206,15 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex 
                 </li>
               ))}
             </ul>
-            {residue.length > 0 && residue.length < RESIDUE_COUNT && (
+            {isDemo && (
+              <button
+                onClick={onUpsell}
+                className="neon-btn mt-2 w-full rounded border border-neon-amber/50 bg-neon-amber/5 px-3 py-1.5 text-[11px] text-neon-amber"
+              >
+                남은 잔향 {RESIDUE_COUNT - residue.length}개는 정식판의 카엘·에코의 길에 있다 →
+              </button>
+            )}
+            {!isDemo && residue.length > 0 && residue.length < RESIDUE_COUNT && (
               <p className="mt-1.5 text-center text-[10px] text-neon-amber/50">
                 제인은 잊었지만 당신은 기억한다. 다음 판에서 새로운 선택지가 열린다.
               </p>

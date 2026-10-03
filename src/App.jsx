@@ -20,6 +20,8 @@ import { resolveIntent, resolveTopic, answerWithModelGated } from './services/in
 import { looksLikeQuestion, TOPICS } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
+import { IS_DEMO, isLockedNode, markLockedChoices } from './game/edition.js'
+import UpsellModal from './components/UpsellModal.jsx'
 import { RESIDUES, RESIDUE_FROM, residueChoicesFor, residueBeat, getResidue, recordResidue } from './game/residue.js'
 import {
   createNewGame,
@@ -145,6 +147,7 @@ export default function App() {
   // 잔향: 회차를 넘어 남는 기억. 세이브와 분리돼 새 판을 시작해도 유지된다.
   const [residueKnown, setResidueKnown] = useState(() => getResidue())
   const [residueMark, setResidueMark] = useState(null)
+  const [upsell, setUpsell] = useState(null) // 체험판: 잠긴 길을 눌렀을 때 'route' | 결말 후 'ending'
   // "내 모델 전용" 모드 — 키가 있어도 클라우드를 안 쓰고 로컬만 사용(오프라인·프라이버시).
   const [forceLocal, setForceLocal] = useState(() => {
     try {
@@ -207,7 +210,8 @@ export default function App() {
   // 루트 분기 노드에서는 authoring 된 선택지를 쓴다(모델 생성분 대신).
   // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
   // 잔향 선택지는 손으로 쓴 장면의 평상 선택지 뒤에만 붙는다(분기·결말 노드 제외).
-  const fixedChoices = endingChoicesFor(save) || routeChoicesOf(save.currentNode)
+  // 체험판에선 잠긴 루트를 숨기지 않고 자물쇠를 채워 보여준다.
+  const fixedChoices = endingChoicesFor(save) || markLockedChoices(routeChoicesOf(save.currentNode))
   const shownChoices =
     fixedChoices ||
     [
@@ -428,6 +432,12 @@ export default function App() {
   function applyBeat(data, playerInput, meta = {}) {
     // 루트 분기는 플레이어의 선택이 최종이다 — 모델이 다른 노드를 골라도 덮어쓴다.
     if (meta.forceBranch) data = { ...data, story_branch: meta.forceBranch }
+    // 체험판 잠금 — 클릭뿐 아니라 자유 입력(의도 분류)으로도 잠긴 길에 들어갈 수
+    // 있으므로, 상태에 반영하기 직전 한 곳에서 막는다. 턴은 소비되지 않는다.
+    if (isLockedNode(data.story_branch)) {
+      setUpsell('route')
+      return
+    }
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
     // Evidence feedback — the payoff / the sting (전용 SFX).
     if (audioOn && data.evidence_result === 'hit') evidenceHit()
@@ -547,6 +557,11 @@ export default function App() {
       <header className="flex items-center justify-between gap-2 px-1">
         <h1 className="shrink truncate text-xs font-extrabold tracking-[0.12em] text-neon-cyan chroma sm:text-sm sm:tracking-[0.3em]">
           AETHERIA<span className="text-neon-magenta">::</span>2099
+          {IS_DEMO && (
+            <span className="ml-2 rounded border border-neon-amber/50 px-1.5 py-0.5 align-middle text-[9px] tracking-widest text-neon-amber">
+              체험판
+            </span>
+          )}
         </h1>
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <IconBtn title="사운드" onClick={toggleAudio}>
@@ -689,7 +704,13 @@ export default function App() {
         choices={shownChoices}
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
-        onChoose={(c) => (offlineMode ? runDemo(c) : advance(c.text, { fromChoice: true, forceBranch: c.branch }))}
+        onChoose={(c) =>
+          c.locked
+            ? setUpsell('route')
+            : offlineMode
+            ? runDemo(c)
+            : advance(c.text, { fromChoice: true, forceBranch: c.branch })
+        }
         onFreeText={(t) => (playable ? advance(t, { freeform: true }) : setShowKeyModal(true))}
         onPresentEvidence={() => {
           if (!playable) {
@@ -744,6 +765,8 @@ export default function App() {
         />
       )}
 
+      {upsell && <UpsellModal reason={upsell} onClose={() => setUpsell(null)} />}
+
       {showKeyModal && (
         <ApiKeyModal
           initial={apiKey}
@@ -782,6 +805,8 @@ export default function App() {
           save={save}
           onRestart={startNewRun}
           onCodex={() => setShowCodex(true)}
+          isDemo={IS_DEMO}
+          onUpsell={() => setUpsell('ending')}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch, Sparkles } from 'lucide-react'
+import { Send, MessageSquare, Ghost, Flame, Search, Terminal, EyeOff, Footprints, FileSearch, Sparkles, Lock } from 'lucide-react'
 
 // 각 톤의 아이콘·색 + "판돈" 태그(위험/보상을 한눈에 — 선택에 무게를 준다).
 const TONE_STYLE = {
@@ -23,6 +23,14 @@ const RESIDUE_STYLE = {
   risk: 0,
 }
 
+// 체험판에서 잠긴 길 — 숨기지 않는다. 보이지만 갈 수 없다는 것이 정식판으로 가는 이유다.
+const LOCKED_STYLE = {
+  icon: Lock,
+  cls: 'border-white/15 text-cyan-200/40 hover:border-neon-amber/50 hover:text-neon-amber/80',
+  stake: '정식판',
+  risk: 0,
+}
+
 export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
   const [text, setText] = useState('')
   // 한글 IME 조합 상태. keydown 시점엔 마지막 글자가 아직 조합 중이라
@@ -41,7 +49,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
     <div className="panel-border rounded-lg p-3">
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
         {(choices || []).map((c, i) => {
-          const s = c.residue ? RESIDUE_STYLE : TONE_STYLE[c.tone] || TONE_STYLE.Honest
+          const s = c.locked ? LOCKED_STYLE : c.residue ? RESIDUE_STYLE : TONE_STYLE[c.tone] || TONE_STYLE.Honest
           const Icon = s.icon
           return (
             <button
@@ -52,11 +60,13 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
             >
               <span className="mb-1 flex items-center gap-1">
                 <Icon size={11} className="opacity-70" />
-                <span className="opacity-70">{c.residue ? '잔향' : c.tone}</span>
+                <span className="opacity-70">{c.locked ? '잠긴 길' : c.residue ? '잔향' : c.tone}</span>
                 {/* 판돈 태그: 위험은 붉게, 잠행/이탈은 시안으로 — 선택의 무게를 노출 */}
                 <span
                   className={`ml-auto rounded px-1 text-[9px] font-bold tracking-wider ${
-                    s.risk > 0 ? 'bg-neon-red/15 text-neon-red' : s.risk < 0 ? 'bg-cyan-400/15 text-cyan-300' : 'bg-white/5 text-cyan-300/50'
+                    c.locked
+                      ? 'bg-neon-amber/10 text-neon-amber/70'
+                      : s.risk > 0 ? 'bg-neon-red/15 text-neon-red' : s.risk < 0 ? 'bg-cyan-400/15 text-cyan-300' : 'bg-white/5 text-cyan-300/50'
                   }`}
                 >
                   {s.stake}
