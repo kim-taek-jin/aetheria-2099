@@ -78,7 +78,7 @@ const healthy = await check()
 console.log()
 if (healthy) {
   console.log('\x1b[32m자체 모델과 함께 실행합니다.\x1b[0m')
-  console.log(dim('  · 본편 18씬은 손으로 쓴 서사 — 모델 없이도 완주됩니다'))
+  console.log(dim('  · 본편 24씬은 손으로 쓴 서사 — 모델 없이도 완주됩니다'))
   console.log(dim('  · 모델은 자유 입력의 의도·주제 판별과 준비된 화제 밖 답변을 맡습니다\n'))
 } else {
   console.log('\x1b[33m자체 모델 없이 실행합니다.\x1b[0m')

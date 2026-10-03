@@ -106,7 +106,7 @@ describe('choiceBeat — 모델 출력과 같은 형태', () => {
     expect(choiceBeat('ENDING_SOLO_EXIT', '아무거나')).toBeNull()
     expect(hasScript('ENDING_SOLO_EXIT')).toBe(false)
   })
-  it('본편 18개 씬이 빠짐없이 authoring 되어 있다', () => {
+  it('본편 전 씬이 빠짐없이 authoring 되어 있다', () => {
     const story = Object.keys(SCENES).filter((id) => !id.startsWith('ENDING_'))
     for (const id of story) expect(hasScript(id), `${id} 미작성`).toBe(true)
   })
@@ -222,6 +222,48 @@ describe('script — AI 없이도 완주된다(무료 웹 공개 조건)', () =>
       expect(b.npc_response.length).toBeGreaterThan(8)
       expect(b.evidence_result).toBe(v)
       expect(b.story_branch).toBe('ACT2_KAEL_HOLDING_01')
+    }
+  })
+})
+
+describe('script — 고른 편이 깨끗하지 않다(Act2 루트 깊이)', () => {
+  // 루트가 3장면이면 "이 편을 골랐다"는 실감이 없다. 각 루트에 진실 장면과
+  // 대가 장면을 넣었고, 이 구조가 나중에 손보다 빠지지 않게 고정한다.
+  const ROUTES = {
+    Ren: { start: 'ACT2_REN_AUCTION_01', added: ['ACT2_REN_LEDGER_01', 'ACT2_REN_SPLIT_01'] },
+    Kael: { start: 'ACT2_KAEL_INTERROGATION_01', added: ['ACT2_KAEL_ARCHIVE_01', 'ACT2_KAEL_ORDER_01'] },
+    Echo: { start: 'ACT2_ECHO_BROADCAST_01', added: ['ACT2_ECHO_SIGNAL_01', 'ACT2_ECHO_COUNT_01'] },
+  }
+  const pathOf = (start) => {
+    const seen = []
+    let node = start
+    while (node.startsWith('ACT2_') && !seen.includes(node)) {
+      seen.push(node)
+      node = SCRIPT[node].choices[0].next
+    }
+    return { seen, exit: node }
+  }
+
+  it('각 루트는 Act3 전에 5장면을 지난다', () => {
+    for (const [r, { start }] of Object.entries(ROUTES)) {
+      const { seen, exit } = pathOf(start)
+      expect(seen.length, `${r}: ${seen.join(' → ')}`).toBe(5)
+      expect(exit).toBe('ACT3_CORE_APPROACH_01')
+    }
+  })
+  it('추가 장면이 어느 선택으로 가도 건너뛰어지지 않는다', () => {
+    for (const [r, { start, added }] of Object.entries(ROUTES)) {
+      // 모든 선택이 같은 next를 갖는지 — 하나라도 다르면 지름길이 생긴다.
+      for (const id of pathOf(start).seen) {
+        const nexts = new Set(SCRIPT[id].choices.map((c) => c.next))
+        expect(nexts.size, `${r}/${id}에 갈림길`).toBe(1)
+      }
+      for (const id of added) expect(pathOf(start).seen, r).toContain(id)
+    }
+  })
+  it('추가 장면은 화자가 그 루트의 인물이다', () => {
+    for (const [r, { added }] of Object.entries(ROUTES)) {
+      for (const id of added) expect(SCRIPT[id].npc).toBe(r)
     }
   })
 })
