@@ -744,7 +744,7 @@ export const SCRIPT = {
         },
         effects: { affinity: 11, suspicion: -4 },
         rivalEffects: { npc: 'Echo', affinity_change: -5, suspicion_change: 8 },
-        next: 'ACT2_KAEL_INTERROGATION_02',
+        next: 'ACT2_KAEL_ARCHIVE_01',
       },
       {
         text: '[은신] 벽을 세 번 두드린다.',
@@ -759,7 +759,7 @@ export const SCRIPT = {
         },
         effects: { affinity: -6, suspicion: 9 },
         rivalEffects: { npc: 'Echo', affinity_change: 14, suspicion_change: -6 },
-        next: 'ACT2_KAEL_INTERROGATION_02',
+        next: 'ACT2_KAEL_ARCHIVE_01',
       },
       {
         text: '[조사] 그가 놓아준 사람이 있냐고 묻는다.',
@@ -775,6 +775,65 @@ export const SCRIPT = {
         },
         effects: { affinity: 7, suspicion: 2 },
         rivalEffects: { npc: 'Echo', suspicion_change: 5 },
+        next: 'ACT2_KAEL_ARCHIVE_01',
+      },
+    ],
+  },
+
+  ACT2_KAEL_ARCHIVE_01: {
+    tone: 'Melancholy',
+    npc: 'Kael',
+    emotion: 'Neutral',
+    narration:
+      '지하 3층. 봉인 서고의 문은 인식표 두 개가 있어야 열린다. 카엘은 자기 것 하나만 대고, ' +
+      '나머지 한 번은 관리자 코드를 직접 친다. 규정상 그가 할 수 없는 일이다.\n\n' +
+      '단말에 삭제 목록이 뜬다. 제인이 먼저 본 것은 처리 구분이다. 전부 "회수"가 아니라 "소거"다. ' +
+      '보안국은 칩 #00을 보관할 생각이 없다. 지울 생각이다.\n\n' +
+      '그리고 목록 아래쪽. 제인의 이름이 3년 치 분량으로 올라와 있다. 결재란에 서명이 있다.',
+    line: '…그 서명을 나는 안다. 20년 동안 내 모든 명령서 밑에 있던 이름이다.',
+    choices: [
+      {
+        text: '[조사] 삭제 기록을 복사한다.',
+        tone: 'Investigate',
+        reaction: {
+          narration:
+            '제인은 기록을 통째로 내려받는다. 진행 막대가 천천히 찬다. ' +
+            '그동안 열람 기록이 올라간다 — 누가, 몇 시에, 무엇을 봤는지가 상부로 간다.\n\n' +
+            '카엘은 막지 않는다. 막지 않는 것도 그에게는 처음 하는 일이다.',
+          line: '가져가라. 다만 알아둬라. 이 순간부터 저쪽은 내가 어디 서 있는지 안다.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: 4, heat: 8 },
+        next: 'ACT2_KAEL_INTERROGATION_02',
+      },
+      {
+        text: '[솔직하게] 복사 대신 카엘에게 서명을 가리킨다.',
+        tone: 'Honest',
+        reaction: {
+          narration:
+            '제인은 손을 떼고 화면을 그에게 돌린다. 카엘이 결재란을 본다. ' +
+            '그는 오래 본다. 형광등이 한 번 깜빡이는 동안에도 자세를 바꾸지 않는다.\n\n' +
+            '그리고 기록을 닫는다. 복사본은 남지 않았다. 대신 그의 얼굴에 남은 것이 있다.',
+          line:
+            '나는 규정을 믿었다. 그 규정이 당신을 지웠다면 — 나는 20년 동안 무엇을 지킨 거지. ' +
+            '대답은 하지 마라. 내가 찾아야 할 몫이다.',
+          emotion: 'Friendly',
+        },
+        effects: { affinity: 12, suspicion: -6 },
+        next: 'ACT2_KAEL_INTERROGATION_02',
+      },
+      {
+        text: '[도발] 당신도 알고 있었던 것 아니냐고 묻는다.',
+        tone: 'Aggressive',
+        reaction: {
+          narration:
+            '제인의 말이 서고의 낮은 천장에 부딪혀 돌아온다. 카엘은 부정하지 않는다. ' +
+            '그는 자기 인식표를 꺼내 손바닥 위에 올려놓고 들여다본다.\n\n' +
+            '20년 전에도 그는 서류를 믿었다. 그래서 아렌이 죽었다. 그 계산이 지금 다시 맞춰진다.',
+          line: '몰랐다. 그리고 그게 변명이 안 된다는 것도 안다. 그때도 나는 몰랐다고 말했으니까.',
+          emotion: 'Suspicious',
+        },
+        effects: { affinity: -5, suspicion: 7 },
         next: 'ACT2_KAEL_INTERROGATION_02',
       },
     ],
@@ -802,7 +861,7 @@ export const SCRIPT = {
           emotion: 'Friendly',
         },
         effects: { affinity: 12, suspicion: -5 },
-        next: 'ACT3_CORE_APPROACH_01',
+        next: 'ACT2_KAEL_ORDER_01',
       },
       {
         text: '[해킹] 정전 30초 안에 그의 단말을 턴다.',
@@ -817,7 +876,7 @@ export const SCRIPT = {
           emotion: 'Suspicious',
         },
         effects: { affinity: 3, suspicion: 7, heat: 5 },
-        next: 'ACT3_CORE_APPROACH_01',
+        next: 'ACT2_KAEL_ORDER_01',
       },
       {
         text: '[도발] 그의 20년이 전부 자기기만이었다고 못 박는다.',
@@ -832,6 +891,64 @@ export const SCRIPT = {
           emotion: 'Threatening',
         },
         effects: { affinity: -2, suspicion: 9, heat: 4 },
+        next: 'ACT2_KAEL_ORDER_01',
+      },
+    ],
+  },
+
+  ACT2_KAEL_ORDER_01: {
+    tone: 'Danger',
+    npc: 'Kael',
+    emotion: 'Threatening',
+    narration:
+      '복도의 조명이 야간 등급으로 내려간 시각, 카엘의 수신기가 울린다. ' +
+      '그는 받는다. 그리고 회선을 끊지 않은 채 제인 쪽으로 반걸음 돌아선다 — 들으라는 뜻이다.\n\n' +
+      '명령은 짧다. 브로커를 처리하고 칩을 반납할 것. 복창하라.\n\n' +
+      '카엘은 복창하지 않는다. 수신기를 누른 채로 3초를 쓴다. 규정상 침묵은 불복이다.',
+    line: '…명령을 확인했다. 복창하기 전에 하나만 묻자. 당신이 내 자리라면, 지금 뭐라고 말하겠나.',
+    choices: [
+      {
+        text: '[솔직하게] 사실대로 말하라고 한다.',
+        tone: 'Honest',
+        reaction: {
+          narration:
+            '제인은 거짓말을 권하지 않는다. 카엘은 고개를 한 번 끄덕이고 회선에 대고 말한다. ' +
+            '— 대상은 확보했다. 반납은 하지 않겠다. 사유는 결재 기록의 적법성이다.\n\n' +
+            '회선 너머가 조용해진다. 그리고 카엘의 인식표가 손목 위에서 붉게 죽는다. 권한 말소다.',
+          line: '이걸로 나는 경비대가 아니다. …이상하군. 20년 만에 처음으로 규정대로 행동한 기분이야.',
+          emotion: 'Friendly',
+        },
+        effects: { affinity: 14, heat: 6 },
+        next: 'ACT3_CORE_APPROACH_01',
+      },
+      {
+        text: '[기만] 이미 놓쳤다고 보고하게 만든다.',
+        tone: 'Deceptive',
+        reaction: {
+          narration:
+            '제인이 입모양으로 문장을 만들어준다. 카엘은 그것을 그대로 읽는다. ' +
+            '— 대상은 하수 구역에서 놓쳤다. 추적조를 요청한다.\n\n' +
+            '회선이 닫힌다. 추적조는 반대편으로 갈 것이다. 시간을 벌었다. ' +
+            '카엘은 자기 손을 내려다본다. 거짓말을 한 손이 낯선 사람의 것처럼 보인다.',
+          line: '…방금 나는 보고서를 위조했다. 당신을 살리려고. 그 둘이 같은 문장에 들어간다는 게 아직 믿기지 않는군.',
+          emotion: 'Suspicious',
+        },
+        effects: { affinity: 5, suspicion: 8, heat: -6 },
+        next: 'ACT3_CORE_APPROACH_01',
+      },
+      {
+        text: '[조사] 그 틈에 회선을 역추적한다.',
+        tone: 'Investigate',
+        reaction: {
+          narration:
+            '카엘이 말을 끄는 동안 제인은 단말을 붙여 발신지를 딴다. 좌표가 뜬다 — ' +
+            '코어 스파이어 41층. 결재란의 서명이 앉아 있는 자리다.\n\n' +
+            '카엘이 그것을 본다. 그는 제인을 말리지 않고, 대신 자기 접속 코드를 불러준다. ' +
+            '더 깊은 층까지 긁으라는 뜻이다. 회선이 끊기고, 그의 인식표도 함께 죽는다.',
+          line: '41층. …내 명령서가 전부 거기서 내려왔다. 가는 길은 내가 안다. 그게 내가 남은 쓸모겠지.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: 8, suspicion: 4, heat: 9 },
         next: 'ACT3_CORE_APPROACH_01',
       },
     ],
