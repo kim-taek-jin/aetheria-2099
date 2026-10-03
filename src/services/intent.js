@@ -13,7 +13,67 @@
 // ============================================================
 
 import { OLLAMA_URL, OLLAMA_MODEL } from './ollamaProvider.js'
+import { MODEL_ID as GEMINI_MODEL } from './geminiService.js'
 import { topicByKeyword } from '../game/answers.js'
+
+// ---- 백엔드: 내 모델(Ollama) 또는 플레이어의 Gemini 키 ----
+// 분류·답변 모두 "프롬프트 → 짧은 텍스트"라서 백엔드만 바꾸면 된다.
+// 웹(itch.io 등)에서는 방문자에게 Ollama가 없으므로, 키가 있으면 Gemini가
+// 내 모델이 하던 일을 그대로 넘겨받는다. 품질 게이트는 똑같이 거친다.
+//   backend: { kind: 'ollama' } | { kind: 'gemini', apiKey }
+const OLLAMA = { kind: 'ollama' }
+
+export async function complete({ prompt, temperature = 0, maxTokens = 5, stop, topP, repeatPenalty, signal, backend = OLLAMA, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+  try {
+    if (backend.kind === 'gemini') {
+      if (!backend.apiKey) return null
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(backend.apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal,
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature,
+              ...(topP ? { topP } : {}),
+              // Flash는 출력 전에 "생각" 토큰을 쓸 수 있고 그것도 이 한도에 포함된다.
+              // 숫자 하나를 받을 때도 여유를 둬야 빈 응답이 안 나온다.
+              maxOutputTokens: Math.max(512, maxTokens * 8),
+              ...(stop?.length ? { stopSequences: stop.slice(0, 5) } : {}),
+            },
+          }),
+        },
+      )
+      if (!r.ok) return null
+      const parts = (await r.json())?.candidates?.[0]?.content?.parts || []
+      // 생각(thought) 파트는 건너뛰고 실제 출력만 모은다.
+      return parts.filter((x) => !x.thought).map((x) => x.text || '').join('').trim()
+    }
+    const r = await fetch(`${url}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        options: {
+          temperature,
+          num_predict: maxTokens,
+          ...(topP ? { top_p: topP } : {}),
+          ...(repeatPenalty ? { repeat_penalty: repeatPenalty } : {}),
+          ...(stop ? { stop } : {}),
+        },
+      }),
+    })
+    if (!r.ok) return null
+    return ((await r.json())?.response || '').trim()
+  } catch {
+    return null // 네트워크·모델 실패 → 호출자가 폴백
+  }
+}
 
 // 톤 라벨에 실제로 쓰이는 말들 — 모델이 없을 때의 폴백 규칙.
 const TONE_WORDS = {
@@ -48,7 +108,7 @@ export function classifyByKeyword(text, choices) {
 }
 
 // 모델에 분류를 맡긴다. 숫자 하나만 받으므로 빠르고(출력 4토큰) 안정적이다.
-export async function classifyIntent({ text, choices, signal, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+export async function classifyIntent({ text, choices, signal, backend, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
   const list = choices.map((c, i) => `${i}: ${c.text}`).join('\n')
   // -1(해당 없음) 예시를 주지 않으면 모델이 -1을 거의 쓰지 않고 아무 선택지에나
   // 억지로 매핑한다("춤을 춘다" → 거짓말). few-shot 두 줄로 실측 정확도가
@@ -70,33 +130,23 @@ ${list}
 행동: ${text}
 번호:`
 
-  try {
-    const r = await fetch(`${url}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal,
-      // temperature 0: 분류는 창의성이 필요 없다. num_predict 4: 숫자 하나면 된다.
-      body: JSON.stringify({ model, prompt, stream: false, options: { temperature: 0, num_predict: 5 } }),
-    })
-    if (!r.ok) return null
-    const raw = ((await r.json())?.response || '').trim()
-    const m = raw.match(/-?\d+/)
-    if (!m) return null
-    const n = parseInt(m[0], 10)
-    if (n === -1) return -1
-    return Number.isInteger(n) && n >= 0 && n < choices.length ? n : -1
-  } catch {
-    return null // 네트워크·모델 실패 → 호출자가 폴백
-  }
+  // temperature 0: 분류는 창의성이 필요 없다. 숫자 하나면 된다.
+  const raw = await complete({ prompt, temperature: 0, maxTokens: 5, signal, backend, url, model })
+  if (raw === null) return null
+  const m = raw.match(/-?\d+/)
+  if (!m) return null
+  const n = parseInt(m[0], 10)
+  if (n === -1) return -1
+  return Number.isInteger(n) && n >= 0 && n < choices.length ? n : -1
 }
 
 // 최종 판정: 모델 → 실패 시 키워드 규칙.
 // useModel=false면 모델을 아예 부르지 않는다 — 웹에 배포하면 방문자에겐
 // Ollama가 없어서 매 턴 localhost:11434 호출이 실패하고 콘솔에 에러가 쌓인다
 // (HTTPS에선 mixed content로 차단). 없는 걸 알면 부르지 않는 게 맞다.
-export async function resolveIntent({ text, choices, signal, useModel = true }) {
+export async function resolveIntent({ text, choices, signal, useModel = true, backend }) {
   if (useModel) {
-    const byModel = await classifyIntent({ text, choices, signal })
+    const byModel = await classifyIntent({ text, choices, signal, backend })
     if (byModel !== null) return byModel
   }
   return classifyByKeyword(text, choices)
@@ -114,7 +164,7 @@ const TOPIC_LABEL = {
   others: '다른 세력(렌·카엘·에코)에 대해',
 }
 
-export async function classifyTopic({ text, topics, signal, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
+export async function classifyTopic({ text, topics, signal, backend, url = OLLAMA_URL, model = OLLAMA_MODEL }) {
   const list = topics.map((t, i) => `${i}: ${TOPIC_LABEL[t] || t}`).join('\n')
   const prompt = `플레이어의 질문이 무엇에 대한 것인지 아래에서 하나 고른다.
 어느 것도 아니면 -1을 출력한다. 번호만 출력한다.
@@ -123,28 +173,18 @@ ${list}
 
 질문: ${text}
 번호:`
-  try {
-    const r = await fetch(`${url}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal,
-      body: JSON.stringify({ model, prompt, stream: false, options: { temperature: 0, num_predict: 5 } }),
-    })
-    if (!r.ok) return null
-    const m = (((await r.json())?.response || '').trim().match(/-?\d+/) || [])[0]
-    if (m === undefined) return null
-    const n = parseInt(m, 10)
-    return n >= 0 && n < topics.length ? topics[n] : null
-  } catch {
-    return null
-  }
+  const raw = await complete({ prompt, temperature: 0, maxTokens: 5, signal, backend, url, model })
+  const m = ((raw || '').match(/-?\d+/) || [])[0]
+  if (m === undefined) return null
+  const n = parseInt(m, 10)
+  return n >= 0 && n < topics.length ? topics[n] : null
 }
 
 // 키워드 우선(빠르고 확실), 없으면 모델에 물어본다.
-export async function resolveTopic({ text, topics, signal, useModel = true }) {
+export async function resolveTopic({ text, topics, signal, useModel = true, backend }) {
   const byKeyword = topicByKeyword(text)
   if (byKeyword) return byKeyword
-  return useModel ? classifyTopic({ text, topics, signal }) : null
+  return useModel ? classifyTopic({ text, topics, signal, backend }) : null
 }
 
 // ---- 모델이 직접 답하기(authoring 주제 밖의 질문) ----
@@ -185,6 +225,7 @@ export async function answerWithModel({
   isAction = false,
   temperature = 0.6,
   signal,
+  backend,
   url = OLLAMA_URL,
   model = OLLAMA_MODEL,
 }) {
@@ -201,29 +242,19 @@ ${task}
 
 ${label}: ${question}
 ${npc}:`
-  try {
-    const r = await fetch(`${url}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal,
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        options: {
-          temperature,
-          top_p: 0.9,
-          num_predict: 80,
-          repeat_penalty: 1.15,
-          stop: ['\n\n', '질문:', '제인의 행동:', '제인:'],
-        },
-      }),
-    })
-    if (!r.ok) return null
-    return (((await r.json())?.response || '').trim().split('\n')[0] || '').trim() || null
-  } catch {
-    return null
-  }
+  const raw = await complete({
+    prompt,
+    temperature,
+    topP: 0.9,
+    maxTokens: 80,
+    repeatPenalty: 1.15,
+    stop: ['\n\n', '질문:', '제인의 행동:', '제인:'],
+    signal,
+    backend,
+    url,
+    model,
+  })
+  return ((raw || '').split('\n')[0] || '').trim() || null
 }
 
 // 게이트를 통과할 때까지 최대 2번 시도한다(두 번째는 온도를 낮춰 노이즈를 줄인다).

@@ -171,6 +171,10 @@ export default function App() {
   const scriptedHere = hasScript(save.currentNode)
   const playable = scriptedHere || aiReady
   const offlineMode = !playable // 손으로 쓴 씬도 없고 AI도 없을 때만 데모
+  // 자유 입력의 판단(의도·주제 분류, 화제 밖 답변)을 맡길 모델.
+  // 내 모델이 있으면 내 모델, 없고 키가 있으면 Gemini, 둘 다 없으면 키워드 규칙.
+  // (웹 방문자는 Ollama가 없으므로 키가 곧 "자유 입력이 더 자유로워지는" 조건이다.)
+  const judge = usingLocal ? { kind: 'ollama' } : effKey ? { kind: 'gemini', apiKey: effKey } : null
 
   // First mount: load key. No key is fine — local model or offline demo covers it.
   useEffect(() => {
@@ -339,7 +343,7 @@ export default function App() {
 
       const sc = SCENES[save.currentNode]
       const askModel = (isAction) =>
-        usingLocal
+        judge
           ? answerWithModelGated(
               {
                 npc: SCRIPT[save.currentNode].npc,
@@ -348,6 +352,7 @@ export default function App() {
                 question: playerInput,
                 isAction,
                 signal: sig,
+                backend: judge,
               },
               hasGarble
             )
@@ -356,16 +361,16 @@ export default function App() {
       if (asking) {
         // 확신 있는 주제만 손으로 쓴 답을 쓴다. 애매하면 모델에게 맡긴다 —
         // 어설프게 들어맞는 정답지보다 질문에 실제로 반응하는 쪽이 낫다.
-        const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: usingLocal })
+        const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: !!judge, backend: judge })
         const line = topic ? null : await askModel(false)
         scripted = askBeat(save.currentNode, topic, save.route, line, playerInput)
       } else {
-        const idx = await resolveIntent({ text: playerInput, choices, signal: sig, useModel: usingLocal })
+        const idx = await resolveIntent({ text: playerInput, choices, signal: sig, useModel: !!judge, backend: judge })
         if (idx >= 0 && idx < choices.length) {
           scripted = choiceBeat(save.currentNode, choices[idx].text, save.route)
         } else {
           // 예상 못한 행동. 확신 있는 주제면 그 답을, 아니면 모델이 반응한다.
-          const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: usingLocal })
+          const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: !!judge, backend: judge })
           const line = topic ? null : await askModel(true)
           scripted =
             topic || line
