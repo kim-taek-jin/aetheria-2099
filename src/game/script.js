@@ -1032,7 +1032,7 @@ export const SCRIPT = {
         },
         effects: { affinity: 12, suspicion: -3 },
         rivalEffects: { npc: 'Ren', affinity_change: -8, suspicion_change: 6 },
-        next: 'ACT2_ECHO_BROADCAST_02',
+        next: 'ACT2_ECHO_SIGNAL_01',
       },
       {
         text: '[기만] 렌의 제안을 받는 척 시간을 번다.',
@@ -1046,7 +1046,7 @@ export const SCRIPT = {
         },
         effects: { affinity: -7, suspicion: 8 },
         rivalEffects: { npc: 'Ren', affinity_change: 10 },
-        next: 'ACT2_ECHO_BROADCAST_02',
+        next: 'ACT2_ECHO_SIGNAL_01',
       },
       {
         text: '[조사] 열두 이름 중 하나를 짚어 누구냐고 묻는다.',
@@ -1060,6 +1060,119 @@ export const SCRIPT = {
         },
         effects: { affinity: 8, suspicion: 4 },
         rivalEffects: { npc: 'Ren', suspicion_change: 4 },
+        next: 'ACT2_ECHO_SIGNAL_01',
+      },
+    ],
+  },
+
+  ACT2_ECHO_SIGNAL_01: {
+    tone: 'Melancholy',
+    npc: 'Echo',
+    emotion: 'Neutral',
+    narration:
+      '송출탑 꼭대기. 바람이 철골을 현처럼 울린다. 에코가 관제실 바닥에 설계도를 펼친다.\n\n' +
+      '제인이 예상한 것은 방송 전파의 범위였다. 화면에 그려진 건 그게 아니다. ' +
+      '돔 전체에 거미줄처럼 깔린 기억 동기화 회선, 그리고 그 위에 찍힌 붉은 절단 지점 열일곱 개.\n\n' +
+      '진실을 알리는 방송이 아니다. NEXUS가 사람들 대신 기억해주던 회선을 끊는 것이다. ' +
+      '설계도 귀퉁이에 에코의 손글씨로 숫자 하나가 적혀 있다. 그 옆에 "이름 손실 예상".',
+    line: '맞아. 깨어나면 잃는 게 있어. 엄마 얼굴, 배운 말, 자기 이름. 그건 NEXUS가 들고 있던 거니까. …그래도 잊은 채로 사는 게 사는 거야?',
+    choices: [
+      {
+        text: '[조사] 송출 범위를 끝까지 확인한다.',
+        tone: 'Investigate',
+        reaction: {
+          narration:
+            '제인은 절단 지점을 하나씩 짚는다. 주거 구역, 학교, 요양 시설. ' +
+            '요양 시설 칸에서 손가락이 멈춘다. 그곳 사람들에게 NEXUS의 기억은 보조 장치가 아니라 전부다.\n\n' +
+            '에코는 그 칸을 보고 있는 제인을 본다. 막지도, 설명하지도 않는다. 확인 기록은 관제실 회선을 타고 바깥으로 샌다.',
+          line: '거기서 멈출 줄 알았어. 나도 거기서 사흘 멈췄거든. …그리고 다시 걸었어.',
+          emotion: 'Neutral',
+        },
+        effects: { affinity: 3, heat: 5 },
+        next: 'ACT2_ECHO_COUNT_01',
+      },
+      {
+        text: '[솔직하게] 사람이 죽는다고 말한다.',
+        tone: 'Honest',
+        reaction: {
+          narration:
+            '에코는 반박하지 않는다. 오래 설계도를 내려다보다가, 펜을 꺼내 요양 시설 쪽 절단 지점 세 개에 줄을 긋는다.\n\n' +
+            '열일곱이 열넷이 된다. 계획은 여전히 돔을 찢는다. 다만 조금 덜.',
+          line: '…다 지울 수는 없어. 그러면 아무것도 안 바뀌어. 근데 세 개는 네 몫으로 남겨둘게. 네가 말했으니까.',
+          emotion: 'Friendly',
+        },
+        effects: { affinity: 8, suspicion: -3 },
+        next: 'ACT2_ECHO_COUNT_01',
+      },
+      {
+        text: '[도발] 너도 NEXUS와 똑같다고 쏘아붙인다.',
+        tone: 'Aggressive',
+        reaction: {
+          narration:
+            '에코의 얼굴에서 피가 빠진다. 그녀는 대답 대신 소매를 걷는다. 팔 안쪽에 오래된 접속 흉터가 있다 — ' +
+            '강제 동기화 시술 자국이다. 그녀가 처음 깨어났을 때 직접 뜯어낸 자리.\n\n' +
+            '바람이 철골을 울린다. 에코는 소매를 내리고, 설계도를 접지 않는다.',
+          line: '똑같지 않아. NEXUS는 묻지 않았어. 나는 묻고 있어. 지금, 너한테. …그 차이가 작아 보이면, 너는 아직 안 뜯어본 거야.',
+          emotion: 'Threatening',
+        },
+        effects: { affinity: -8, suspicion: 7 },
+        next: 'ACT2_ECHO_COUNT_01',
+      },
+    ],
+  },
+
+  ACT2_ECHO_COUNT_01: {
+    tone: 'Danger',
+    npc: 'Echo',
+    emotion: 'Suspicious',
+    narration:
+      '송출 세 시간 전. 장비실에서 의자 끄는 소리가 난다. 모스다. 반군에서 가장 어린 해커. ' +
+      '그가 헤드셋을 내려놓고 출구 쪽으로 걷는다. 걸음이 고르지 않다.\n\n' +
+      '모두가 그가 어디로 가는지 안다. 보안국 신고 창구는 여기서 네 블록이다.\n\n' +
+      '모스 — "…우리 엄마가 요양 구역에 있어요. 끊기면 나를 못 알아본대요. 그거 알고 계속 할 수가 없어요."\n\n' +
+      '에코는 그를 막지 않는다. 대신 제인 쪽으로 고개를 돌린다.',
+    line: '네가 정해. 내가 정하면 — 나는 저 애를 가둘 거야. 그리고 그게 무서워.',
+    choices: [
+      {
+        text: '[솔직하게] 보내준다.',
+        tone: 'Honest',
+        reaction: {
+          narration:
+            '제인이 문을 열어준다. 모스는 고맙다는 말 대신 한 번 고개를 숙이고 빗속으로 나간다. ' +
+            '네 블록. 신고가 들어가기까지 길어야 20분이다.\n\n' +
+            '에코가 송출 카운트다운을 세 시간에서 40분으로 당긴다. 손이 떨리지 않는다. 떨림은 이미 지나갔다.',
+          line: '…고마워. 사람을 안 버리는 쪽을 골라줘서. 그 값은 우리가 치르면 돼. 서두르자.',
+          emotion: 'Friendly',
+        },
+        effects: { affinity: 10, heat: 9 },
+        next: 'ACT2_ECHO_BROADCAST_02',
+      },
+      {
+        text: '[기만] 가짜 신고 좌표를 쥐여 보낸다.',
+        tone: 'Deceptive',
+        reaction: {
+          narration:
+            '제인은 모스에게 다가가 단말에 좌표 하나를 넣어준다. 진짜 거점은 이쪽이 아니니 여기를 말하라고. ' +
+            '모스는 고개를 끄덕이고 나간다. 그가 신고할 좌표는 비어 있는 배수장이다.\n\n' +
+            '에코는 그 장면을 끝까지 본다. 그리고 아무 말도 하지 않는다. 그 침묵이 길다.',
+          line: '…잘했어. 정말로. 근데 저 애는 오늘 밤 우리를 팔러 간 줄 알 거야. 사실은 우리가 저 애를 속였는데.',
+          emotion: 'Suspicious',
+        },
+        effects: { affinity: 2, suspicion: 8, heat: -5 },
+        next: 'ACT2_ECHO_BROADCAST_02',
+      },
+      {
+        text: '[공격] 붙잡아 장비실에 가둔다.',
+        tone: 'Aggressive',
+        reaction: {
+          narration:
+            '제인이 모스의 팔을 잡는다. 모스는 저항하지 않는다. 그게 더 나쁘다. ' +
+            '장비실 문이 닫히고, 잠금 표시등이 초록에서 빨강으로 바뀐다.\n\n' +
+            '에코는 그 표시등을 오래 본다. 그리고 벽의 열두 개 이름 옆으로 걸어가, 펜을 꺼냈다가 — 다시 넣는다.',
+          line: '…방금 우리가 한 거, NEXUS가 매일 하는 거야. 사람 대신 정해주는 거. 기억해둬, 제인. 나는 잊지 않을 거니까.',
+          emotion: 'Threatening',
+        },
+        effects: { affinity: -9, suspicion: 6, heat: -3 },
         next: 'ACT2_ECHO_BROADCAST_02',
       },
     ],
