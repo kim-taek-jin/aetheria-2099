@@ -120,8 +120,8 @@ describe('answers — 물으면 답한다(플레이어가 중심이 되는 층)'
   it('같은 질문에는 같은 회피(일관성)', () => {
     expect(pickDeflect('Kael', '우주는 뭐야')).toBe(pickDeflect('Kael', '우주는 뭐야'))
   })
-  it('주제가 20개로 늘었고 네 화자가 모두 답한다', () => {
-    expect(TOPICS.length).toBe(20)
+  it('주제가 40개 이상이고 네 화자가 모두 답한다', () => {
+    expect(TOPICS.length).toBeGreaterThanOrEqual(40)
     for (const npc of ['Ren', 'Kael', 'Echo', 'NEXUS']) {
       for (const t of TOPICS) expect(ANSWERS[npc][t]?.line, `${npc}/${t}`).toBeTruthy()
     }

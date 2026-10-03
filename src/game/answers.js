@@ -13,11 +13,16 @@
 //  렌은 값으로, 카엘은 규정으로, 에코는 불로, NEXUS는 보호로 답한다.
 // ============================================================
 
+import { EXTRA_KEYWORDS, EXTRA_ANSWERS, EXTRA_DEFLECT } from './answers.extra.js'
+import { TOPIC_KEYWORDS_EN, ANSWERS_EN, DEFLECT_EN, EVIDENCE_REACT_EN } from './answers.en.js'
+
 // 주제 판별용 키워드(모델 없이도 동작하는 1차 신호).
-export const TOPIC_KEYWORDS = {
+// 영어 단어('nexus', 'ai')는 영어 목록(answers.en.js)에서 단어 단위로 잡는다 —
+// 여기 두면 부분 문자열 매칭이라 "said", "again"이 전부 NEXUS 질문이 된다.
+const BASE_KEYWORDS = {
   chip: ['칩이', '칩을', '칩은', '칩도', '이 칩', '그 칩', '#00', '이 물건', '데이터'],
   outside: ['바깥', '밖', '하늘', '초록', '숲', '정화', '장벽', '외부'],
-  nexus: ['넥서스', 'nexus', '시스템', '인공지능', 'ai', '리엔'],
+  nexus: ['넥서스', '시스템', '인공지능', '리엔'],
   self: ['당신', '너는', '넌 누구', '정체', '왜 그래', '왜 이런'],
   past: ['내 과거', '3년', '삼년', '내 기억', '나는 누구', '내가 누구', '지워진'],
   courier: ['배달원', '죽은 사람', '그 남자', '시체'],
@@ -43,8 +48,10 @@ export const TOPIC_KEYWORDS = {
   broker: ['브로커', '기억 시장', '내 일', '기억 거래', '장사'],
 }
 
+export const TOPIC_KEYWORDS = { ...BASE_KEYWORDS, ...EXTRA_KEYWORDS }
+
 // ANSWERS[화자][주제] = { line, narration? }
-export const ANSWERS = {
+const BASE_ANSWERS = {
   Ren: {
     chip: {
       line: '값을 못 매기는 물건이야. 내 일에서 그건 두 가지 중 하나지 — 쓰레기거나, 아직 시장이 안 열린 거거나. 이건 후자야.',
@@ -327,9 +334,13 @@ export const ANSWERS = {
   },
 }
 
+export const ANSWERS = Object.fromEntries(
+  Object.entries(BASE_ANSWERS).map(([npc, byTopic]) => [npc, { ...byTopic, ...(EXTRA_ANSWERS[npc] || {}) }]),
+)
+
 // 화자가 답할 수 없을 때의 회피. 인물당 여러 개를 두는 이유는,
 // 하나뿐이면 두 번만 걸려도 같은 말이 반복돼 "못 답하는구나"가 들통나기 때문이다.
-export const DEFLECT = {
+const BASE_DEFLECT = {
   Ren: [
     '그건 지금 값이 안 나와, 제인. 나중에 하자.',
     '질문이 많네. 질문도 재고야 — 쌓이면 손해고.',
@@ -356,10 +367,17 @@ export const DEFLECT = {
   ],
 }
 
+export const DEFLECT = Object.fromEntries(
+  Object.entries(BASE_DEFLECT).map(([npc, list]) => [npc, [...list, ...(EXTRA_DEFLECT[npc] || [])]]),
+)
+
+const byLang = (lang, ko, en) => (lang === 'en' ? en : ko)
+
 // 회피 문장을 고른다. 질문 내용으로 인덱스를 정해, 같은 질문엔 같은 답이
 // 나오되(일관성) 다른 질문엔 다른 답이 나오게 한다(반복 방지).
-export function pickDeflect(npc, seed = '') {
-  const list = DEFLECT[npc] || DEFLECT.NEXUS
+export function pickDeflect(npc, seed = '', lang = 'ko') {
+  const table = byLang(lang, DEFLECT, DEFLECT_EN)
+  const list = table[npc] || table.NEXUS
   let h = 0
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
   return list[h % list.length]
@@ -370,18 +388,37 @@ export function pickDeflect(npc, seed = '') {
 // 질문형이 전부 행동으로 처리돼 장면이 넘어가 버린다(= 물어봤는데 답이 없다).
 const ASK_MARKS =
   /[?？]|뭐|뭔|무엇|무슨|왜|누구|어디|어떻게|어떤|얼마|언제|맞아|맞나|인가|있나|있어|건가|알려|설명|말해|얘기|물어|궁금|이유|정체|누구야|거야\s*$|니\s*$|나\s*$/
+// 영어 질문형: 물음표, 의문사로 시작, 조동사로 시작, "tell me / explain".
+const ASK_MARKS_EN =
+  /^\s*(who|what|why|where|when|how|which|is|are|am|was|were|do|does|did|can|could|will|would|should|have|has)\b|\b(tell me|explain|describe|talk about|wondering)\b/i
 export function looksLikeQuestion(text) {
-  return ASK_MARKS.test(String(text || ''))
+  const t = String(text || '')
+  return ASK_MARKS.test(t) || ASK_MARKS_EN.test(t)
 }
 
 // 키워드로 주제를 고른다. 점수는 매칭된 키워드 길이의 합이다 —
 // 짧은 키워드가 긴 키워드를 이기지 못하게 하기 위함.
+// 영어 키워드는 단어 단위로 맞춘다("ai"가 "said"에 걸리지 않게). 끝에 '*'면 어간.
+const EN_RX = Object.fromEntries(
+  Object.entries(TOPIC_KEYWORDS_EN).map(([topic, words]) => [
+    topic,
+    words.map((w) => {
+      const stem = w.endsWith('*')
+      const body = (stem ? w.slice(0, -1) : w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return { len: body.length, rx: new RegExp(`(^|[^a-z0-9])${body}${stem ? '' : '(?![a-z0-9])'}`, 'i') }
+    }),
+  ]),
+)
+
+// 한국어·영어 키워드를 모두 본다 — 언어 설정과 상관없이 플레이어는 아무 말로나 친다.
 export function topicMatch(text) {
   const t = String(text || '').toLowerCase()
   let best = null
   let bestScore = 0
-  for (const [topic, words] of Object.entries(TOPIC_KEYWORDS)) {
-    const score = words.reduce((n, w) => n + (t.includes(w.toLowerCase()) ? w.length : 0), 0)
+  for (const topic of Object.keys(TOPIC_KEYWORDS)) {
+    const ko = TOPIC_KEYWORDS[topic].reduce((n, w) => n + (t.includes(w.toLowerCase()) ? w.length : 0), 0)
+    const en = (EN_RX[topic] || []).reduce((n, k) => n + (k.rx.test(t) ? k.len : 0), 0)
+    const score = ko + en
     if (score > bestScore) {
       bestScore = score
       best = topic
@@ -404,10 +441,11 @@ export const TOPICS = Object.keys(TOPIC_KEYWORDS)
 
 // 답변 beat을 만든다. 씬은 진전시키지 않는다 — 대화는 장면을 소모하지 않는다.
 // (그래서 플레이어가 마음껏 물어볼 수 있다. 다만 추적 시계는 계속 돈다.)
-export function answerBeat(npc, topic, scene, seed = '') {
-  const byNpc = ANSWERS[npc] || ANSWERS.NEXUS
+export function answerBeat(npc, topic, scene, seed = '', lang = 'ko') {
+  const table = byLang(lang, ANSWERS, ANSWERS_EN)
+  const byNpc = table[npc] || table.NEXUS
   const a = byNpc[topic]
-  const line = a ? a.line : pickDeflect(npc, seed)
+  const line = a ? a.line : pickDeflect(npc, seed, lang)
   return {
     // 대화 표식 — 상태머신이 호감 바닥 보장을 건너뛰게 한다.
     // 없으면 질문만 반복해도 호감이 매번 +6씩 올라 파밍이 된다.
@@ -474,8 +512,9 @@ export const EVIDENCE_REACT = {
 }
 
 // 증거 제시 beat. verdict는 클라이언트 판정('hit' | 'miss').
-export function evidenceBeat(npc, verdict, scene) {
-  const r = (EVIDENCE_REACT[npc] || EVIDENCE_REACT.NEXUS)[verdict === 'hit' ? 'hit' : 'miss']
+export function evidenceBeat(npc, verdict, scene, lang = 'ko') {
+  const table = byLang(lang, EVIDENCE_REACT, EVIDENCE_REACT_EN)
+  const r = (table[npc] || table.NEXUS)[verdict === 'hit' ? 'hit' : 'miss']
   const hit = verdict === 'hit'
   return {
     narration: r.narration,
