@@ -16,8 +16,8 @@ import { OPENING } from './game/lore.js'
 // 손으로 쓴 서사(authored spine). 있는 씬에서는 AI를 아예 호출하지 않는다 —
 // 글이 좋아지고, 덤으로 대기가 0이 된다.
 import { hasScript, openingBeat, choiceBeat, nudgeBeat, askBeat, evidenceScriptBeat, SCRIPT } from './game/script.js'
-import { resolveIntent, resolveTopic, answerWithModelGated } from './services/intent.js'
-import { looksLikeQuestion, TOPICS } from './game/answers.js'
+import { resolveIntent, resolveTopic, answerWithModelGated, classifyByKeyword } from './services/intent.js'
+import { looksLikeQuestion, TOPICS, topicByKeyword } from './game/answers.js'
 import { SCENES, remainingEstimate, judgeEvidence, weakPointOf, routeChoicesOf, endingChoicesFor } from './game/scenes.js'
 import { DEMO_BEATS, nextDemoBeat } from './game/offline.js'
 import { IS_DEMO, isLockedNode, markLockedChoices } from './game/edition.js'
@@ -355,7 +355,11 @@ export default function App() {
     if (!scripted && meta.freeform && hasScript(save.currentNode)) {
       const sig = abortRef.current.signal
       const choices = SCRIPT[save.currentNode].choices
-      const asking = looksLikeQuestion(playerInput)
+      // 물음표가 없어도 대화일 수 있다("심심해", "고마워", "배고파").
+      // 알아듣는 화제가 있고 행동을 뜻하는 단어가 없으면 대화로 받는다 —
+      // 안 그러면 모델이 그 말을 선택지 하나로 억지로 분류해 장면이 넘어가 버린다.
+      const talking = Boolean(topicByKeyword(playerInput)) && classifyByKeyword(playerInput, choices) === -1
+      const asking = looksLikeQuestion(playerInput) || talking
 
       const sc = SCENES[save.currentNode]
       const askModel = (isAction) =>
@@ -380,7 +384,7 @@ export default function App() {
         // 어설프게 들어맞는 정답지보다 질문에 실제로 반응하는 쪽이 낫다.
         const topic = await resolveTopic({ text: playerInput, topics: TOPICS, signal: sig, useModel: !!judge, backend: judge })
         const line = topic ? null : await askModel(false)
-        scripted = askBeat(save.currentNode, topic, save.route, line, playerInput, lang)
+        scripted = askBeat(save.currentNode, topic, save.route, line, `${playerInput}#${save.turnCount}`, lang)
       } else {
         const idx = await resolveIntent({ text: playerInput, choices, signal: sig, useModel: !!judge, backend: judge })
         if (idx >= 0 && idx < choices.length) {
@@ -391,7 +395,7 @@ export default function App() {
           const line = topic ? null : await askModel(true)
           scripted =
             topic || line
-              ? askBeat(save.currentNode, topic, save.route, line, playerInput, lang)
+              ? askBeat(save.currentNode, topic, save.route, line, `${playerInput}#${save.turnCount}`, lang)
               : nudgeBeat(save.currentNode, save.route, lang)
         }
       }

@@ -12,7 +12,8 @@ import {
   pickDeflect,
   evidenceBeat,
 } from '../src/game/answers.js'
-import { ANSWERS_EN, DEFLECT_EN, EVIDENCE_REACT_EN, TOPIC_KEYWORDS_EN } from '../src/game/answers.en.js'
+import { ANSWERS_EN, DEFLECT_EN, TOPIC_KEYWORDS_EN, answerList } from '../src/game/answers.js'
+import { EVIDENCE_REACT_EN } from '../src/game/answers.en.js'
 
 const NPCS = ['Ren', 'Kael', 'Echo', 'NEXUS']
 
@@ -49,10 +50,10 @@ describe('답변 — 두 언어가 같은 범위를 덮는다', () => {
       }
     }
   })
-  it('회피는 인물당 8개, 두 언어 같은 수', () => {
+  it('회피는 인물당 12개, 두 언어 같은 수', () => {
     for (const npc of NPCS) {
-      expect(DEFLECT[npc]).toHaveLength(8)
-      expect(DEFLECT_EN[npc]).toHaveLength(8)
+      expect(DEFLECT[npc]).toHaveLength(12)
+      expect(DEFLECT_EN[npc]).toHaveLength(12)
     }
   })
   it('증거 반응도 두 언어', () => {

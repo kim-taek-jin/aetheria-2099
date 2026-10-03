@@ -14,7 +14,10 @@
 // ============================================================
 
 import { EXTRA_KEYWORDS, EXTRA_ANSWERS, EXTRA_DEFLECT } from './answers.extra.js'
-import { TOPIC_KEYWORDS_EN, ANSWERS_EN, DEFLECT_EN, EVIDENCE_REACT_EN } from './answers.en.js'
+import { TOPIC_KEYWORDS_EN as BASE_KEYWORDS_EN, ANSWERS_EN as BASE_ANSWERS_EN, DEFLECT_EN as BASE_DEFLECT_EN, EVIDENCE_REACT_EN } from './answers.en.js'
+import { VARIANTS, MORE_DEFLECT, MORE_KEYWORDS, MORE_KEYWORDS_EN } from './answers/index.js'
+
+export const TOPIC_KEYWORDS_EN = { ...BASE_KEYWORDS_EN, ...MORE_KEYWORDS_EN }
 
 // 주제 판별용 키워드(모델 없이도 동작하는 1차 신호).
 // 영어 단어('nexus', 'ai')는 영어 목록(answers.en.js)에서 단어 단위로 잡는다 —
@@ -26,7 +29,7 @@ const BASE_KEYWORDS = {
   self: ['당신', '너는', '넌 누구', '정체', '왜 그래', '왜 이런'],
   past: ['내 과거', '3년', '삼년', '내 기억', '나는 누구', '내가 누구', '지워진'],
   courier: ['배달원', '죽은 사람', '그 남자', '시체'],
-  others: ['렌', '카엘', '에코', '다른 세력', '반군', '경비대'],
+  others: ['렌', '카엘', '에코', '다른 세력'],
 
   // 흥정·거래 — 플레이어가 실제로 제일 많이 던지는 수.
   price: ['가격', '값어치', '얼마짜리', '얼마에', '얼마라고', '얼마야', '얼마고', '시세', '호가', '값'],
@@ -48,7 +51,7 @@ const BASE_KEYWORDS = {
   broker: ['브로커', '기억 시장', '내 일', '기억 거래', '장사'],
 }
 
-export const TOPIC_KEYWORDS = { ...BASE_KEYWORDS, ...EXTRA_KEYWORDS }
+export const TOPIC_KEYWORDS = { ...BASE_KEYWORDS, ...EXTRA_KEYWORDS, ...MORE_KEYWORDS }
 
 // ANSWERS[화자][주제] = { line, narration? }
 const BASE_ANSWERS = {
@@ -334,9 +337,32 @@ const BASE_ANSWERS = {
   },
 }
 
+// 대표 답(첫 번째). 새 화제는 변형 목록의 첫 줄이 대표가 된다.
+const withFirstVariant = (base, variants) => {
+  const out = { ...base }
+  for (const [topic, lines] of Object.entries(variants || {})) if (!out[topic]) out[topic] = { line: lines[0] }
+  return out
+}
 export const ANSWERS = Object.fromEntries(
-  Object.entries(BASE_ANSWERS).map(([npc, byTopic]) => [npc, { ...byTopic, ...(EXTRA_ANSWERS[npc] || {}) }]),
+  Object.entries(BASE_ANSWERS).map(([npc, byTopic]) => [
+    npc,
+    withFirstVariant({ ...byTopic, ...(EXTRA_ANSWERS[npc] || {}) }, VARIANTS.ko[npc]),
+  ]),
 )
+export const ANSWERS_EN = Object.fromEntries(
+  Object.entries(BASE_ANSWERS_EN).map(([npc, byTopic]) => [npc, withFirstVariant(byTopic, VARIANTS.en[npc])]),
+)
+
+// 한 화제에 대한 모든 답(대표 + 변형). 같은 화제를 다시 물으면 다른 답이 나오게.
+export function answerList(npc, topic, lang = 'ko') {
+  const table = lang === 'en' ? ANSWERS_EN : ANSWERS
+  const first = (table[npc] || table.NEXUS)?.[topic]
+  if (!first) return []
+  const vars = (VARIANTS[lang]?.[npc] || VARIANTS[lang]?.NEXUS || {})[topic] || []
+  // 새 화제는 대표가 곧 변형의 첫 줄이므로 중복을 빼고 잇는다.
+  const rest = vars.filter((l) => l !== first.line).map((line) => ({ line }))
+  return [first, ...rest]
+}
 
 // 화자가 답할 수 없을 때의 회피. 인물당 여러 개를 두는 이유는,
 // 하나뿐이면 두 번만 걸려도 같은 말이 반복돼 "못 답하는구나"가 들통나기 때문이다.
@@ -368,8 +394,20 @@ const BASE_DEFLECT = {
 }
 
 export const DEFLECT = Object.fromEntries(
-  Object.entries(BASE_DEFLECT).map(([npc, list]) => [npc, [...list, ...(EXTRA_DEFLECT[npc] || [])]]),
+  Object.entries(BASE_DEFLECT).map(([npc, list]) => [
+    npc,
+    [...list, ...(EXTRA_DEFLECT[npc] || []), ...(MORE_DEFLECT.ko[npc] || [])],
+  ]),
 )
+export const DEFLECT_EN = Object.fromEntries(
+  Object.entries(BASE_DEFLECT_EN).map(([npc, list]) => [npc, [...list, ...(MORE_DEFLECT.en[npc] || [])]]),
+)
+
+const hashOf = (seed) => {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return h
+}
 
 const byLang = (lang, ko, en) => (lang === 'en' ? en : ko)
 
@@ -442,9 +480,8 @@ export const TOPICS = Object.keys(TOPIC_KEYWORDS)
 // 답변 beat을 만든다. 씬은 진전시키지 않는다 — 대화는 장면을 소모하지 않는다.
 // (그래서 플레이어가 마음껏 물어볼 수 있다. 다만 추적 시계는 계속 돈다.)
 export function answerBeat(npc, topic, scene, seed = '', lang = 'ko') {
-  const table = byLang(lang, ANSWERS, ANSWERS_EN)
-  const byNpc = table[npc] || table.NEXUS
-  const a = byNpc[topic]
+  const list = topic ? answerList(npc, topic, lang) : []
+  const a = list.length ? list[hashOf(seed) % list.length] : null
   const line = a ? a.line : pickDeflect(npc, seed, lang)
   return {
     // 대화 표식 — 상태머신이 호감 바닥 보장을 건너뛰게 한다.

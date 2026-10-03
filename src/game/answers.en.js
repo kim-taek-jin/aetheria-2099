@@ -12,11 +12,11 @@
 export const TOPIC_KEYWORDS_EN = {
   chip: ['chip', '#00', 'this thing', 'the data', 'this device'],
   outside: ['outside', 'sky', 'green', 'forest', 'beyond the wall', 'the wall', 'barrier', 'purif*'],
-  nexus: ['nexus', 'the system', 'artificial', 'the ai', 'ai', 'lien'],
+  nexus: ['nexus', 'the system', 'artificial', 'the ai', 'ai'],
   self: ['who are you', 'what are you', 'about yourself', 'your story', 'why are you like'],
   past: ['my past', 'three years', '3 years', 'my memory', 'who am i', 'who was i', 'erased', 'what happened to me'],
   courier: ['courier', 'dead man', 'the body', 'delivery guy', 'the guy who died', 'corpse'],
-  others: ['ren', 'kael', 'echo', 'factions', 'rebels', 'the guard', 'security'],
+  others: ['ren', 'kael', 'echo', 'factions'],
   price: ['price', 'worth', 'how much', 'valu*', 'cost'],
   deal: ['deal', 'terms', 'share', 'percent', 'contract', 'what do you want', 'offer', 'bargain'],
   elsewhere: ['someone else', 'somebody else', 'another buyer', 'elsewhere', 'sell it to', 'take it to'],
