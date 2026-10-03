@@ -108,6 +108,10 @@ export default function App() {
   // 언어: 브라우저가 한국어면 한국어, 아니면 영어로 시작(itch.io 방문자 대부분이 영어권).
   const [lang, setLang] = useState(detectLang)
   const t = (key, vars) => tr(lang, key, vars)
+  // 화면 낭독기·번역 제안·폰트 선택이 올바르게 동작하도록 문서 언어를 맞춘다.
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   const [save, setSave] = useState(() => storage.loadSave() || withStamp(createNewGame()))
   // 비트가 없을 때는 세이브가 있는 씬의 도입부를 쓴다.
