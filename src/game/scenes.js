@@ -28,6 +28,7 @@
 import { voiceBlock } from './voices.js'
 import { hasScript } from './script.js'
 import { backstoryBlock } from './backstories.js'
+import { IS_DEMO, isLockedNode } from './edition.js'
 
 export const SCENES = {
   // ---------------- PROLOGUE ----------------
@@ -787,9 +788,9 @@ const ENDING_CHOICES = {
 }
 
 // 지금 세이브로 고를 수 있는 결말 선택지(엔딩 선택 노드가 아니면 null).
-export function endingChoicesFor(save) {
+export function endingChoicesFor(save, demo = IS_DEMO) {
   if (!SCENES[save.currentNode]?.endingChoiceNode) return null
-  const elig = eligibleEndings(save)
+  const elig = eligibleEndings(save, demo)
   const out = elig.filter((id) => ENDING_CHOICES[id]).map((id) => ({ ...ENDING_CHOICES[id], branch: id }))
   return out.length ? out : null
 }
@@ -864,7 +865,7 @@ const ROUTE_ENDING = {
 // 불가능했다(10판 최소 20) → 25로 둬야 '홀로 걷는 길'이 실제로 열린다.
 const ALLY_MIN = 25
 
-export function eligibleEndings(save) {
+export function eligibleEndings(save, demo = IS_DEMO) {
   const rel = save.relationships || {}
   const A = (n) => rel[n]?.affinity ?? 0
   const S = (n) => rel[n]?.suspicion ?? 0
@@ -899,6 +900,11 @@ export function eligibleEndings(save) {
   if (gapCount >= 4) out.push('ENDING_JAYNE_ORIGIN')
   // 홀로 걷는 길: 어느 편에도 서지 않았거나, 섰어도 관계를 쌓지 못했을 때.
   if (!route || routeAff < ALLY_MIN) out.push('ENDING_SOLO_EXIT')
+  // 체험판에서는 숨겨진 결말 둘이 잠겨서, 루트를 끝까지 판 플레이어에게 남는
+  // 선택지가 하나뿐이었다 — 게임의 절정이 선택이 아니라 통로가 된다
+  // (itch.io 피드백: "I kept getting blocked by full version coming soon").
+  // 마지막 문 앞에서 돌아서는 길은 언제나 열어 둔다: 그래야 결말이 선택이 된다.
+  if (demo && out.filter((id) => !isLockedNode(id, demo)).length < 2) out.push('ENDING_SOLO_EXIT')
   // Safety net — never leave the finale with nowhere to go.
   if (out.length === 0) out.push('ENDING_SOLO_EXIT')
   return [...new Set(out)]

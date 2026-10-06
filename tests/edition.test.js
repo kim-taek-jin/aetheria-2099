@@ -131,3 +131,38 @@ describe('edition — 체험판은 반전을 풀지 않는다', () => {
     expect(n.fragments.some((f) => f.includes('수석 연구원'))).toBe(true)
   })
 })
+
+describe('edition — 체험판에서도 결말은 선택이어야 한다', () => {
+  // itch.io 피드백: "I kept getting blocked by full version coming soon."
+  // 숨겨진 결말 둘을 잠그면 루트를 끝까지 판 플레이어에게 남는 선택지가 하나뿐이었다.
+  const earned = (aff) => {
+    const b = createNewGame()
+    return {
+      ...b,
+      currentNode: 'ACT3_DESIGNER_CONFRONT_01',
+      route: 'Ren',
+      heat: 10,
+      relationships: {
+        ...b.relationships,
+        Ren: { ...b.relationships.Ren, affinity: aff, suspicion: 10 },
+        Kael: { ...b.relationships.Kael, affinity: 30, suspicion: 10 },
+        Echo: { ...b.relationships.Echo, affinity: 10, suspicion: 10 },
+      },
+      fragments: [1, 2, 3, 4].map((n) => `기억 조각 · 빈자리 #${n}: …`),
+    }
+  }
+  const openCount = (save, demo) =>
+    (endingChoicesFor(save, demo) || []).filter((c) => !isLockedNode(c.branch, demo)).length
+
+  it('루트를 끝까지 판 플레이어도 체험판에서 결말을 2개 이상 고를 수 있다', () => {
+    expect(openCount(earned(45), true)).toBeGreaterThanOrEqual(2)
+  })
+  it('정식판 결말 구성은 그대로다(체험판 보정이 새지 않는다)', () => {
+    const full = endingChoicesFor(earned(45), false) || []
+    expect(full.map((c) => c.branch)).not.toContain('ENDING_SOLO_EXIT')
+    expect(full.filter((c) => isLockedNode(c.branch, false))).toHaveLength(0)
+  })
+  it('관계를 못 쌓았어도 고를 결말이 남는다', () => {
+    expect(openCount(earned(10), true)).toBeGreaterThanOrEqual(1)
+  })
+})

@@ -128,6 +128,8 @@ export const UI = {
     upsellEndingLockedTitle: '이 결말은 정식판에서 열립니다',
     upsellEndingLocked: '이 결말의 조건은 이미 갖췄습니다. 다만 그 너머의 진실은 정식판에 남겨 두었습니다. 지금은 다른 결말을 고를 수 있습니다.',
     backToEndings: '다른 결말 고르기',
+    lockedNoteRoute: '이 길은 정식판에서 — 지금은 렌의 길을 걷습니다',
+    lockedNoteEnding: '이 결말은 정식판에서 — 다른 결말을 고를 수 있습니다',
     // api key modal
     keyTooShort: '키가 너무 짧습니다. 전체를 복사해 붙여넣었는지 확인하세요.',
     keyPrefix: '참고: 보통 "AIza"로 시작합니다. 인증을 시도합니다…',
@@ -256,6 +258,8 @@ export const UI = {
     upsellEndingLockedTitle: 'This ending opens in the full game',
     upsellEndingLocked: "You've already met the conditions for this ending. The truth beyond it is waiting in the full game. For now, you can choose another ending.",
     backToEndings: 'Choose another ending',
+    lockedNoteRoute: "Full game only — you're walking Ren's path for now",
+    lockedNoteEnding: 'Full game only — another ending is still open to you',
     keyTooShort: 'That key is too short. Make sure you copied the whole thing.',
     keyPrefix: 'Note: keys usually start with "AIza". Trying to authenticate…',
     keyPinging: 'Sending NEXUS auth ping…',

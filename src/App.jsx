@@ -161,6 +161,22 @@ export default function App() {
   const [residueKnown, setResidueKnown] = useState(() => getResidue())
   const [residueMark, setResidueMark] = useState(null)
   const [upsell, setUpsell] = useState(null) // 체험판: 잠긴 길을 눌렀을 때 'route' | 결말 후 'ending'
+  // 안내창은 한 판에 한 번만. 잠긴 선택지는 분기(2개)와 결말(2개)에 있어서, 매번
+  // 창이 뜨면 플레이어는 게임이 아니라 벽을 만난다
+  // (itch.io 피드백: "I kept getting blocked by full version coming soon").
+  const upsellShownRef = useRef(false)
+  const [lockedNote, setLockedNote] = useState(null)
+
+  // 잠긴 길을 눌렀을 때: 처음엔 설명 창, 그다음부터는 한 줄 안내만.
+  function showLocked(reason) {
+    if (!upsellShownRef.current) {
+      upsellShownRef.current = true
+      setUpsell(reason)
+      return
+    }
+    setLockedNote(reason)
+    setTimeout(() => setLockedNote(null), 2600)
+  }
   // "내 모델 전용" 모드 — 키가 있어도 클라우드를 안 쓰고 로컬만 사용(오프라인·프라이버시).
   const [forceLocal, setForceLocal] = useState(() => {
     try {
@@ -461,7 +477,7 @@ export default function App() {
     // 체험판 잠금 — 클릭뿐 아니라 자유 입력(의도 분류)으로도 잠긴 길에 들어갈 수
     // 있으므로, 상태에 반영하기 직전 한 곳에서 막는다. 턴은 소비되지 않는다.
     if (isLockedNode(data.story_branch)) {
-      setUpsell(data.story_branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
+      showLocked(data.story_branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
       return
     }
     if (data.background_tone === 'Forest_Glitch' && audioOn) glitchBurst()
@@ -697,6 +713,12 @@ export default function App() {
       )}
 
       {/* 레일 위의 창발 — 플레이어 행동이 세계에 남긴 새 흔적(canon) 알림 */}
+      {lockedNote && (
+        <div className="intro-up flex items-center justify-center gap-2 rounded border border-neon-amber/40 bg-neon-amber/10 py-1 text-[11px] tracking-widest text-neon-amber">
+          🔒 {lockedNote === 'ending-locked' ? t('lockedNoteEnding') : t('lockedNoteRoute')}
+        </div>
+      )}
+
       {residueMark && (
         <div className="intro-up rounded border border-neon-amber/50 bg-neon-amber/10 px-3 py-1.5 text-center text-[11px] text-neon-amber">
           <span className="font-bold tracking-widest">{t('residueGained', { label: residueLabel(residueMark, lang) })}</span>
@@ -750,7 +772,7 @@ export default function App() {
         fragmentCount={save.fragments?.length || 0}
         onChoose={(c) =>
           c.locked
-            ? setUpsell(c.branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
+            ? showLocked(c.branch?.startsWith('ENDING_') ? 'ending-locked' : 'route')
             : offlineMode
             ? runDemo(c)
             : advance(c.text, { fromChoice: true, forceBranch: c.branch })
