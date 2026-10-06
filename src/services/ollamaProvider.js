@@ -151,13 +151,34 @@ export async function generateBeat({ save, playerInput, signal, onPartial, freef
 }
 
 // 로컬 Ollama가 살아있고 모델이 있는지 확인(프로바이더 선택에 사용).
-export async function isAvailable(url = OLLAMA_URL, model = OLLAMA_MODEL) {
+//
+// 반드시 시간 제한을 둔다. 방화벽·보안 프로그램이 localhost 요청을 "거부"가 아니라
+// "응답 없음"으로 삼켜버리는 환경이 있고, 그러면 이 fetch가 몇 분씩 매달린다.
+// 첫 화면에서 이걸 기다리던 웹 방문자는 게임이 안 열린다고 느낀다(itch.io 댓글: "Timed out").
+export const LOCAL_PROBE_TIMEOUT_MS = 3000
+
+// 로컬 모델을 찾아볼 가치가 있는 환경인가.
+// 데스크톱 빌드(file://)나 개발 서버(localhost)에서만 Ollama가 있을 수 있다.
+// itch.io 같은 웹 호스팅에서는 방문자 PC에 Ollama가 떠 있을 리 없고, 시도해봐야
+// 막히거나 느려질 뿐이다(브라우저가 HTTPS 페이지에서 http://localhost 요청을 차단하기도 한다).
+export function localModelPossible(loc = typeof location !== 'undefined' ? location : null) {
+  if (!loc) return false
+  if (loc.protocol === 'file:') return true // Electron 등 데스크톱 빌드
+  return loc.hostname === 'localhost' || loc.hostname === '127.0.0.1' || loc.hostname === '[::1]'
+}
+
+export async function isAvailable(url = OLLAMA_URL, model = OLLAMA_MODEL, timeoutMs = LOCAL_PROBE_TIMEOUT_MS) {
+  if (!localModelPossible()) return false
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
-    const r = await fetch(`${url}/api/tags`)
+    const r = await fetch(`${url}/api/tags`, { signal: ctrl.signal })
     if (!r.ok) return false
     const j = await r.json()
     return (j?.models || []).some((m) => (m.name || '').startsWith(model))
   } catch {
     return false
+  } finally {
+    clearTimeout(timer)
   }
 }

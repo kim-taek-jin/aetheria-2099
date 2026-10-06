@@ -9,6 +9,12 @@ import { useT } from '../i18n/index.js'
 //  (자동재생 정책상 muted로 재생 — 소리를 넣으려면 시작 게이트가 필요.)
 // ============================================================
 
+// 영상이 이 시간 안에 재생을 시작하지 못하면 그냥 타이틀로 넘어간다.
+// 영상은 분위기를 위한 것이지 게임의 전제 조건이 아니다 — 느린 회선이나 자동재생
+// 차단 때문에 검은 화면에 갇히면 플레이어는 "게임이 안 열린다"고 느낀다
+// (itch.io 첫 댓글: "It wouldn't load for me. Timed out.").
+export const VIDEO_START_TIMEOUT_MS = 4000
+
 export default function IntroSequence({ onDone }) {
   const t = useT()
   const [stage, setStage] = useState('video') // 'video' | 'title'
@@ -40,6 +46,17 @@ export default function IntroSequence({ onDone }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [stage])
 
+  // 영상이 제때 시작하지 못하면 기다리지 않고 타이틀로 넘어간다.
+  useEffect(() => {
+    if (stage !== 'video') return
+    const timer = setTimeout(() => {
+      const v = videoRef.current
+      const playing = v && v.readyState >= 3 && !v.paused && v.currentTime > 0
+      if (!playing) setStage('title')
+    }, VIDEO_START_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [stage])
+
   return (
     <div
       className="crt fixed inset-0 z-[100] flex cursor-pointer items-center justify-center overflow-hidden bg-void transition-all duration-500"
@@ -60,7 +77,10 @@ export default function IntroSequence({ onDone }) {
             autoPlay
             muted
             playsInline
+            preload="auto"
             onEnded={() => setStage('title')}
+            onError={() => setStage('title')}
+            onStalled={() => setStage('title')}
           />
           {/* CRT 스캔라인 오버레이 — AI 영상 잔결함(간판 등)을 눌러주고 게임 룩과 통일 */}
           <div
