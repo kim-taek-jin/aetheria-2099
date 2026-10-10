@@ -1,5 +1,6 @@
 import { Lock, ExternalLink, X } from 'lucide-react'
 import { STORE_URL } from '../game/edition.js'
+import { residueLockedCount } from '../game/residue.js'
 import { useT } from '../i18n/index.js'
 
 // 체험판에서 잠긴 길을 눌렀을 때. 광고가 아니라 "이 길 끝에 무엇이 있는지"를
@@ -33,7 +34,8 @@ export default function UpsellModal({ reason = 'route', onClose }) {
         <ul className="mb-5 space-y-2">
           {WHAT_YOU_GET.map(([k, v]) => (
             <li key={k} className="text-xs leading-relaxed">
-              <span className="font-bold text-neon-amber">◈ {t(k)}</span>
+              {/* 잔향 수는 하드코딩하지 않는다 — 잔향을 늘리면 문구가 같이 따라간다. */}
+              <span className="font-bold text-neon-amber">◈ {t(k, { n: residueLockedCount() })}</span>
               <span className="text-cyan-200/60"> — {t(v)}</span>
             </li>
           ))}

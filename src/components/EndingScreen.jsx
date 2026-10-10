@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { RotateCcw, BookLock, Trophy, Clock, Fingerprint } from 'lucide-react'
 import { SCENES } from '../game/scenes.js'
 import { ALL_ENDINGS, ENDING_COUNT, recordEnding } from '../game/collection.js'
-import { RESIDUES, RESIDUE_COUNT, getResidue, residueLabel } from '../game/residue.js'
+import { getResidue, residueLabel, residueProgress, residueLockedCount } from '../game/residue.js'
 import CodeRain from './CodeRain.jsx'
 import { useLang, useT } from '../i18n/index.js'
 import { sceneTitle } from '../game/localize.js'
@@ -96,6 +96,13 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
   const [col, setCol] = useState({ discovered: [], isNew: false })
   useEffect(() => setCol(recordEnding(endingId)), [endingId])
   const residue = useMemo(() => getResidue(), [endingId])
+  // 분모는 판본별이다 — 체험판은 렌 루트에서 얻을 수 있는 것만 센다.
+  // 그래야 한 판을 온전히 끝낸 플레이어가 "2/2"를 보고 완결로 읽는다.
+  const { ids: residueIdList, have: residueHave, total: residueMax } = useMemo(
+    () => residueProgress(residue, isDemo),
+    [residue, isDemo],
+  )
+  const residueLocked = useMemo(() => residueLockedCount(isDemo), [isDemo])
   const scene = SCENES[endingId]
   const style = ENDING_STYLE[endingId] || ENDING_STYLE.ENDING_KAEL_SILENCE
   const hidden = endingId === 'ENDING_NEXUS_TRUST' || endingId === 'ENDING_JAYNE_ORIGIN'
@@ -220,24 +227,24 @@ export default function EndingScreen({ endingId, beat, save, onRestart, onCodex,
           {/* 잔향 — 다음 판을 다르게 만드는 것. "다시 하면 뭐가 달라지는가"에 대한 답. */}
           <div className="mt-3 border-t border-cyan-500/10 pt-3 text-left">
             <div className="mb-1.5 text-center text-[10px] tracking-[0.3em] text-neon-amber/60">
-              {t('residueCount', { n: residue.length, total: RESIDUE_COUNT })}
+              {t('residueCount', { n: residueHave, total: residueMax })}
             </div>
             <ul className="space-y-1 text-[11px]">
-              {Object.keys(RESIDUES).map((id) => (
+              {residueIdList.map((id) => (
                 <li key={id} className={residue.includes(id) ? 'text-neon-amber/85' : 'text-cyan-500/30'}>
                   {residue.includes(id) ? `◈ ${residueLabel(id, lang)}` : t('residueUnknown')}
                 </li>
               ))}
             </ul>
-            {isDemo && (
+            {isDemo && residueLocked > 0 && (
               <button
                 onClick={onUpsell}
                 className="neon-btn mt-2 w-full rounded border border-neon-amber/50 bg-neon-amber/5 px-3 py-1.5 text-[11px] text-neon-amber"
               >
-                {t('residueDemoUpsell', { n: RESIDUE_COUNT - residue.length })}
+                {t('residueDemoUpsell', { n: residueLocked })}
               </button>
             )}
-            {!isDemo && residue.length > 0 && residue.length < RESIDUE_COUNT && (
+            {!isDemo && residueHave > 0 && residueHave < residueMax && (
               <p className="mt-1.5 text-center text-[10px] text-neon-amber/50">
                 {t('residueReplay')}
               </p>

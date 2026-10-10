@@ -242,19 +242,21 @@ export default function App() {
 
   // 루트 분기 노드에서는 authoring 된 선택지를 쓴다(모델 생성분 대신).
   // 게임의 중심 선택이라 모델의 판단에 맡기지 않는다.
-  // 잔향 선택지는 손으로 쓴 장면의 평상 선택지 뒤에만 붙는다(분기·결말 노드 제외).
   // 체험판에선 잠긴 루트를 숨기지 않고 자물쇠를 채워 보여준다.
   const fixedChoices = localizeFixedChoices(
     save.currentNode,
     markLockedChoices(endingChoicesFor(save)) || markLockedChoices(routeChoicesOf(save.currentNode)),
     lang,
   )
-  const shownChoices =
-    fixedChoices ||
-    [
-      ...(beat?.generated_choices || []),
-      ...(hasScript(save.currentNode) ? residueChoicesFor(save.currentNode, residueKnown, save.flags, lang) : []),
-    ]
+  // 잔향 선택지는 **분기·결말 노드에도** 붙는다. 씬을 진전시키지 않으므로
+  // 강제된 분기 선택지는 그대로 남고, 플레이어는 고르기 전에 상대를 한 번
+  // 찔러볼 수 있다 — 지난 판의 기억이 가장 쓸모 있는 자리가 바로 거기다.
+  const residueExtra = hasScript(save.currentNode)
+    ? residueChoicesFor(save.currentNode, residueKnown, save.flags, lang)
+    : []
+  const shownChoices = fixedChoices
+    ? [...fixedChoices, ...residueExtra]
+    : [...(beat?.generated_choices || []), ...residueExtra]
 
   // 잔향 획득 — 그 진실이 드러나는 장면에 들어선 순간 남는다.
   useEffect(() => {
