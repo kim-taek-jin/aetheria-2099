@@ -128,6 +128,13 @@ body {
 }
 .delta-float { animation: deltaFloat 2.2s ease-out forwards; }
 
+/* 채팅 "입력 중" 점 세 개 — 나레이션이 끝나고 대사가 시작되기 전 구간을 채운다.
+   빈 말풍선이 떠 있는 대신, 상대가 지금 말을 고르고 있다는 느낌을 준다. */
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 0.9; transform: translateY(-2px); }
+}
+
 /* 증거 HIT/MISS — 화면 전체 짧은 플래시 */
 @keyframes evidenceFlash {
   0% { opacity: 0; transform: scale(0.9); }

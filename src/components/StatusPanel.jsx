@@ -57,7 +57,46 @@ export default function StatusPanel({ save, delta }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {/* 모바일 — 막대 없이 숫자만 한 줄로. 세로로 쌓으면 세 장이 화면의 절반을
+          먹어서 정작 대화가 두 줄만 보인다. 폰에서는 대화창이 주인공이다. */}
+      <div className="grid grid-cols-3 gap-1 sm:hidden">
+        {npcs.map((n) => {
+          const r = save.relationships[n]
+          const active = save.activeNpc === n
+          const hostile = r.suspicion >= GATES.SUSPICION_HOSTILE
+          const d = delta?.npc === n ? delta : null
+          return (
+            <div
+              key={n}
+              className={`relative rounded border px-1.5 py-1 ${
+                active ? 'border-neon-cyan/60 bg-cyan-500/5' : 'border-cyan-500/15'
+              }`}
+            >
+              <div className={`truncate text-[10px] font-bold ${NPC_COLOR[n]}`}>{n}</div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className={`flex items-center gap-0.5 ${hostile ? 'text-neon-red' : 'text-neon-amber/80'}`}>
+                  <Eye size={9} />
+                  {r.suspicion}
+                </span>
+                <span className="flex items-center gap-0.5 text-neon-green/80">
+                  <Heart size={9} />
+                  {r.affinity}
+                </span>
+              </div>
+              {d && (d.dSus || d.dAff) && (
+                <span
+                  key={dk}
+                  className="delta-float pointer-events-none absolute -top-2 right-1 text-[10px] font-bold text-neon-cyan"
+                >
+                  {d.dAff ? `${d.dAff > 0 ? '+' : ''}${d.dAff}♥` : `${d.dSus > 0 ? '+' : ''}${d.dSus}👁`}
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="hidden gap-2 sm:grid sm:grid-cols-3">
         {npcs.map((n) => {
           const r = save.relationships[n]
           const active = save.activeNpc === n

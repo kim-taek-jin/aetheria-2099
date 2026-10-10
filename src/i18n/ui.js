@@ -33,6 +33,7 @@ export const UI = {
     dangerWarn: ({ npc, s }) => `경고 // ${npc}의 의심 ${s} — 임계 접근. 신중하지 않으면 체포된다.`,
     footerTurns: ({ t, turns, mins }) => `T${t} · 엔딩까지 약 ${turns}턴 (~${mins}분)`,
     // main screen
+    youLabel: '제인',
     clickReveal: '클릭 — 전부 표시',
     signalLeak: '░ SIGNAL LEAK // 외부 정화 영상 감지 ░',
     computing: '▓ NEXUS 연산 중 · 데이터 스트림 수신 ▓',
@@ -171,6 +172,7 @@ export const UI = {
     evidenceMiss: '✕ MISS ✕',
     dangerWarn: ({ npc, s }) => `WARNING // ${npc}'s suspicion is ${s} — near the limit. Push further and you'll be arrested.`,
     footerTurns: ({ t, turns, mins }) => `T${t} · about ${turns} turns to an ending (~${mins} min)`,
+    youLabel: 'Jayne',
     clickReveal: 'Click — show all',
     signalLeak: '░ SIGNAL LEAK // purified outside footage detected ░',
     computing: '▓ NEXUS computing · receiving data stream ▓',

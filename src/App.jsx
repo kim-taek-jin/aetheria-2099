@@ -766,7 +766,7 @@ export default function App() {
         </div>
       )}
 
-      <MainScreen beat={beat} glitch={glitch} loading={loading} streaming={streaming} />
+      <MainScreen beat={beat} glitch={glitch} loading={loading} streaming={streaming} turns={save.recentTurns} />
 
       <InteractionPanel
         choices={shownChoices}
