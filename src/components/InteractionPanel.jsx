@@ -32,7 +32,7 @@ const LOCKED_STYLE = {
   risk: 0,
 }
 
-export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled }) {
+export default function InteractionPanel({ choices, onChoose, onFreeText, onPresentEvidence, fragmentCount = 0, disabled, firstWord = false, onSkipFirstWord }) {
   const t = useT()
   const [text, setText] = useState('')
   // 한글 IME 조합 상태. keydown 시점엔 마지막 글자가 아직 조합 중이라
@@ -49,7 +49,17 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
 
   return (
     <div className="panel-border rounded-lg p-3">
-      <div className="mb-3 grid gap-2 sm:grid-cols-3">
+      {/* 첫 입력 — 이 게임에서 "어, 이건 다르네"를 만드는 건 자유 입력뿐인데,
+          선택지 세 개 아래 입력칸으로 두면 처음 온 사람은 버튼만 누르다 나간다.
+          그래서 첫 턴에는 선택지를 잠깐 치우고 직접 한 마디 하게 한다.
+          누르면 바로 선택지로 넘어갈 수 있다 — 막지는 않는다. */}
+      {firstWord && (
+        <div className="intro-up mb-3 rounded border border-neon-cyan/40 bg-neon-cyan/[0.05] px-3 py-3 text-center">
+          <div className="text-[11px] font-bold tracking-widest text-neon-cyan">{t('firstWordTitle')}</div>
+          <div className="mt-1 text-[11px] leading-relaxed text-cyan-200/60">{t('firstWordSub')}</div>
+        </div>
+      )}
+      <div className={`mb-3 grid gap-2 sm:grid-cols-3 ${firstWord ? 'hidden' : ''}`}>
         {(choices || []).map((c, i) => {
           const s = c.locked ? LOCKED_STYLE : c.residue ? RESIDUE_STYLE : TONE_STYLE[c.tone] || TONE_STYLE.Honest
           const Icon = s.icon
@@ -84,6 +94,7 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
         <button
           onClick={onPresentEvidence}
           disabled={disabled || fragmentCount === 0}
+          hidden={firstWord}
           title={fragmentCount === 0 ? t('evidenceNone') : t('evidenceTitle')}
           className="neon-btn flex shrink-0 items-center gap-1 rounded border border-neon-green/40 bg-neon-green/5 px-3 text-xs text-neon-green disabled:cursor-not-allowed disabled:opacity-30"
         >
@@ -104,7 +115,8 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
             if (e.key === 'Enter' && !composing.current) submitFree()
           }}
           disabled={disabled}
-          placeholder={t('freePlaceholder')}
+          autoFocus={firstWord}
+          placeholder={firstWord ? t('firstWordPlaceholder') : t('freePlaceholder')}
           className="flex-1 rounded border border-neon-cyan/25 bg-black/50 px-3 py-2 text-sm text-cyan-100 outline-none focus:border-neon-cyan disabled:opacity-40"
         />
         <button
@@ -115,6 +127,15 @@ export default function InteractionPanel({ choices, onChoose, onFreeText, onPres
           <Send size={16} />
         </button>
       </div>
+
+      {firstWord && (
+        <button
+          onClick={onSkipFirstWord}
+          className="mt-2 w-full text-center text-[10px] tracking-widest text-cyan-300/40 hover:text-neon-cyan"
+        >
+          {t('firstWordSkip')}
+        </button>
+      )}
     </div>
   )
 }

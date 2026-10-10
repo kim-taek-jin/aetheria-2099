@@ -160,6 +160,8 @@ export default function App() {
   // 잔향: 회차를 넘어 남는 기억. 세이브와 분리돼 새 판을 시작해도 유지된다.
   const [residueKnown, setResidueKnown] = useState(() => getResidue())
   const [residueMark, setResidueMark] = useState(null)
+  // 첫 턴에 자유 입력을 한 번 겪게 한다(아래 firstWord). 건너뛰면 그 판에서는 다시 묻지 않는다.
+  const [skipFirstWord, setSkipFirstWord] = useState(false)
   const [upsell, setUpsell] = useState(null) // 체험판: 잠긴 길을 눌렀을 때 'route' | 결말 후 'ending'
   // 안내창은 한 판에 한 번만. 잠긴 선택지는 분기(2개)와 결말(2개)에 있어서, 매번
   // 창이 뜨면 플레이어는 게임이 아니라 벽을 만난다
@@ -257,6 +259,18 @@ export default function App() {
   const shownChoices = fixedChoices
     ? [...fixedChoices, ...residueExtra]
     : [...(beat?.generated_choices || []), ...residueExtra]
+
+  // 첫 턴에는 선택지 대신 자유 입력을 먼저 보여준다. 19명이 보고 6명이 눌렀지만
+  // 그 다음이 다른 텍스트 게임과 구별되지 않는다 — 이 게임의 훅은 "친 말에 답이
+  // 온다"는 것 하나인데, 선택지 밑 입력칸으로 두면 아무도 건드리지 않는다.
+  const firstWord =
+    !skipFirstWord &&
+    (save.turnCount || 0) === 0 &&
+    !save.endingReached &&
+    !save.failed &&
+    !showTutorial &&
+    hasScript(save.currentNode) &&
+    shownChoices.length > 0
 
   // 잔향 획득 — 그 진실이 드러나는 장면에 들어선 순간 남는다.
   useEffect(() => {
@@ -377,7 +391,9 @@ export default function App() {
       // 알아듣는 화제가 있고 행동을 뜻하는 단어가 없으면 대화로 받는다 —
       // 안 그러면 모델이 그 말을 선택지 하나로 억지로 분류해 장면이 넘어가 버린다.
       const talking = Boolean(topicByKeyword(playerInput)) && classifyByKeyword(playerInput, choices) === -1
-      const asking = looksLikeQuestion(playerInput) || talking
+      // 첫 입력은 무조건 "묻는 말"로 받는다 — 장면을 넘기는 대신 인물이 답하게.
+      // 이 한 번이 "내가 친 말에 답이 온다"를 겪게 하는 자리다.
+      const asking = meta.forceAsk || looksLikeQuestion(playerInput) || talking
 
       const sc = SCENES[save.currentNode]
       const askModel = (isAction) =>
@@ -770,6 +786,8 @@ export default function App() {
 
       <InteractionPanel
         choices={shownChoices}
+        firstWord={firstWord}
+        onSkipFirstWord={() => setSkipFirstWord(true)}
         disabled={loading || !!save.endingReached || !!save.failed}
         fragmentCount={save.fragments?.length || 0}
         onChoose={(c) =>
@@ -779,7 +797,7 @@ export default function App() {
             ? runDemo(c)
             : advance(c.text, { fromChoice: true, forceBranch: c.branch })
         }
-        onFreeText={(t) => (playable ? advance(t, { freeform: true }) : setShowKeyModal(true))}
+        onFreeText={(t) => (playable ? advance(t, { freeform: true, forceAsk: firstWord }) : setShowKeyModal(true))}
         onPresentEvidence={() => {
           if (!playable) {
             // 손으로 쓴 씬도 없고 AI도 없을 때만 키를 요구한다.

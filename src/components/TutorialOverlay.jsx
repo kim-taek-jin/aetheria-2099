@@ -18,6 +18,10 @@ export default function TutorialOverlay({ onClose }) {
 
         {en ? (
           <ul className="space-y-3 text-[13px] leading-relaxed text-cyan-100/90">
+            <li className="rounded border border-neon-cyan/40 bg-neon-cyan/[0.06] p-2">
+              <b className="text-neon-cyan">Type freely</b> — this isn't only a choice game. Instead of picking an
+              option you can type what Jayne says or does. Ask a question and the character answers in their own voice.
+            </li>
             <li>
               <b>Relationship gauges</b> — your choices move each person's{' '}
               <span className="text-neon-amber">suspicion</span> and <span className="text-neon-green">trust</span>. Help one
@@ -31,13 +35,13 @@ export default function TutorialOverlay({ onClose }) {
               <b>Memory fragments = evidence</b> — present the right fragment at the right moment and a relationship
               shifts hard. Present the wrong one and it backfires.
             </li>
-            <li>
-              <b>Type freely</b> — instead of picking a choice, you can type what Jayne says or does. Ask questions;
-              people answer.
-            </li>
           </ul>
         ) : (
           <ul className="space-y-3 text-[13px] leading-relaxed text-cyan-100/90">
+            <li className="rounded border border-neon-cyan/40 bg-neon-cyan/[0.06] p-2">
+              <b className="text-neon-cyan">자유 입력</b> — 이 게임은 선택지만 있는 게 아니다. 선택지를 고르는 대신
+              제인이 할 말이나 행동을 직접 칠 수 있다. 물으면 인물이 자기 말투로 답한다.
+            </li>
             <li>
               <b>관계 게이지</b> — 선택이 상대의 <span className="text-neon-amber">의심</span>·
               <span className="text-neon-green">호감</span>을 바꾼다. 한쪽을 도우면 라이벌이 경계한다
@@ -50,9 +54,6 @@ export default function TutorialOverlay({ onClose }) {
             <li>
               <b>기억 조각 = 증거</b> — 모은 조각을 결정적 순간 제시하면 관계가 크게 흔들린다.
               엉뚱하게 쓰면 역효과.
-            </li>
-            <li>
-              <b>자유 입력</b> — 선택지 대신 제인의 말이나 행동을 직접 칠 수 있다. 물으면 인물이 답한다.
             </li>
           </ul>
         )}

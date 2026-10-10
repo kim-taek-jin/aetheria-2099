@@ -177,3 +177,29 @@ describe('새 화제로 간다 — English', () => {
   it('"catch"는 고양이가 아니다', () => expect(topicByKeyword('catch me if you can')).not.toBe('animal'))
   it('"start"는 별이 아니다', () => expect(topicByKeyword('where do we start')).not.toBe('stars'))
 })
+
+// 처음 온 사람이 제일 먼저 치는 말. 여기서 빗나가면 첫 자유 입력이 곧바로
+// "못 알아들었다"는 인상이 되고, 이 게임의 유일한 훅이 거기서 죽는다.
+describe('첫 질문 — 빗나가면 안 되는 것들', () => {
+  const KO = {
+    '너 뭔데?': 'self',
+    '너 누구야?': 'self',
+    '넌 뭐야': 'self',
+    '당신 누구세요': 'self',
+    '이게 뭐야': 'chip',
+    '이 칩이 뭐야?': 'chip',
+    '나 누구야': 'past',
+    '무슨 일이야': 'plan',
+  }
+  for (const [text, topic] of Object.entries(KO))
+    it(`"${text}" → ${topic}`, () => expect(topicByKeyword(text)).toBe(topic))
+
+  it('대붕괴 질문을 가로채지 않는다', () => {
+    expect(topicByKeyword('대붕괴 때 무슨 일이 있었어')).toBe('collapse')
+    expect(topicByKeyword('what happened in the collapse?', 'en')).toBe('collapse')
+  })
+  it('영어 첫 질문도 잡힌다', () => {
+    for (const q of ['who are you?', 'what are you', 'what is this chip', 'who am I'])
+      expect(topicByKeyword(q, 'en'), q).toBeTruthy()
+  })
+})
